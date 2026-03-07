@@ -114,6 +114,27 @@ def deliver_add_job_impl(job_data: dict, dry_run: bool = False) -> dict:
             "job": validated.model_dump(),
         }
     project = _get_current_project()
+    if validated.preset_name:
+        success = project.LoadRenderPreset(validated.preset_name)
+        if not success:
+            raise ValidationError(
+                field="preset_name",
+                reason=f"Preset not found: {validated.preset_name}",
+            )
+    if validated.timeline_name:
+        count = project.GetTimelineCount()
+        found = False
+        for i in range(1, count + 1):
+            tl = project.GetTimelineByIndex(i)
+            if tl and tl.GetName() == validated.timeline_name:
+                project.SetCurrentTimeline(tl)
+                found = True
+                break
+        if not found:
+            raise ValidationError(
+                field="timeline_name",
+                reason=f"Timeline not found: {validated.timeline_name}",
+            )
     project.SetRenderSettings({
         "SelectAllFrames": True,
         "TargetDir": validated.output_dir,

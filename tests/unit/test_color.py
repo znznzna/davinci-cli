@@ -56,17 +56,25 @@ class TestColorApplyLutImpl:
         with pytest.raises(ValidationError, match="not allowed"):
             color_apply_lut_impl(clip_index=0, lut_path="/tmp/malicious.exe")
 
-    def test_dry_run(self):
+    def test_dry_run(self, tmp_path):
+        lut = tmp_path / "test.cube"
+        lut.touch()
         result = color_apply_lut_impl(
-            clip_index=0, lut_path="/valid/path.cube", dry_run=True
+            clip_index=0, lut_path=str(lut), dry_run=True
         )
         assert result["dry_run"] is True
         assert result["action"] == "apply_lut"
 
-    def test_apply_lut(self, mock_resolve):
+    def test_lut_not_found(self):
+        with pytest.raises(ValidationError, match="not found"):
+            color_apply_lut_impl(clip_index=0, lut_path="/nonexistent/path.cube")
+
+    def test_apply_lut(self, mock_resolve, tmp_path):
+        lut = tmp_path / "rec709.cube"
+        lut.touch()
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = color_apply_lut_impl(
-                clip_index=0, lut_path="/luts/rec709.cube"
+                clip_index=0, lut_path=str(lut)
             )
         assert "applied" in result
 

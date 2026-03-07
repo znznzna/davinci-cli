@@ -134,6 +134,11 @@ def color_apply_lut_impl(
     dry_run: bool = False,
 ) -> dict:
     validated = validate_path(lut_path, allowed_extensions=_LUT_EXTENSIONS)
+    if not validated.exists():
+        raise ValidationError(
+            field="lut_path",
+            reason=f"LUT file not found: {lut_path}",
+        )
     if dry_run:
         return {
             "dry_run": True,
@@ -143,7 +148,12 @@ def color_apply_lut_impl(
         }
     tl = _get_current_timeline()
     clip_item = _get_clip_item_by_index(tl, clip_index)
-    clip_item.SetLUT(1, str(validated))
+    result = clip_item.SetLUT(1, str(validated))
+    if result is False:
+        raise ValidationError(
+            field="lut_path",
+            reason=f"Failed to apply LUT: {lut_path}",
+        )
     return {"applied": str(validated), "clip_index": clip_index}
 
 
@@ -257,8 +267,8 @@ def still_apply_impl(
     resolve = get_resolve()
     project = resolve.GetProjectManager().GetCurrentProject()
     gallery = project.GetGallery()
-    album = gallery.GetCurrentStillAlbum()
-    stills = album.GetStills()
+    album = gallery.GetCurrentStillAlbum() if gallery else None
+    stills = (album.GetStills() if album else None) or []
     if still_index < 0 or still_index >= len(stills):
         raise ValidationError(
             field="still_index",
