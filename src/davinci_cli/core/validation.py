@@ -22,7 +22,8 @@ from pathlib import Path
 from davinci_cli.core.exceptions import ValidationError
 
 # パストラバーサルパターン（デコード後に検査）
-_PATH_TRAVERSAL_RE = re.compile(r"\.\.")
+# パスセグメントとしての ".." のみ検出。"clip..v2.mov" 等の正当な名前は許可する。
+_PATH_TRAVERSAL_RE = re.compile(r"(?:^|[/\\])\.\.[/\\]|(?:^|[/\\])\.\.$")
 
 # リソースID禁止文字
 _RESOURCE_ID_INVALID_CHARS_RE = re.compile(r"[?#%\s]")

@@ -64,6 +64,21 @@ class TestValidatePath:
         result = validate_path("/path/to/anything.xyz")
         assert result.suffix == ".xyz"
 
+    def test_double_dot_in_filename_allowed(self):
+        """ファイル名に '..' を含む正当なパスは許可する（例: clip..v2.mov）"""
+        result = validate_path("/media/clip..v2.mov")
+        assert result.name == "clip..v2.mov"
+
+    def test_double_dot_in_directory_name_allowed(self):
+        """ディレクトリ名に '..' を含む正当なパスは許可する"""
+        result = validate_path("/media/my..project/clip.mov")
+        assert isinstance(result, Path)
+
+    def test_path_traversal_bare_dotdot(self):
+        """パスが '..' のみの場合は拒絶"""
+        with pytest.raises(ValidationError, match="path traversal"):
+            validate_path("..")
+
     def test_symlink_resolved(self, tmp_path):
         """シンボリックリンクは resolve() で実体パスに解決される"""
         real_file = tmp_path / "real.drp"
