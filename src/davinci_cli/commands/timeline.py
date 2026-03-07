@@ -16,7 +16,6 @@ from davinci_cli.decorators import dry_run_option, fields_option, json_input_opt
 from davinci_cli.output.formatter import output
 from davinci_cli.schema_registry import register_schema
 
-
 # --- Pydantic Models ---
 
 
