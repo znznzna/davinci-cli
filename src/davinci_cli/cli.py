@@ -81,13 +81,25 @@ def dr(ctx: click.Context, pretty: bool, verbose: bool, debug: bool) -> None:
 
 
 def _register_commands() -> None:
-    from davinci_cli.commands import clip, project, schema, system, timeline
+    from davinci_cli.commands import (
+        clip,
+        color,
+        deliver,
+        media,
+        project,
+        schema,
+        system,
+        timeline,
+    )
 
     dr.add_command(system.system)
     dr.add_command(schema.schema)
     dr.add_command(project.project)
     dr.add_command(timeline.timeline)
     dr.add_command(clip.clip)
+    dr.add_command(color.color)
+    dr.add_command(media.media)
+    dr.add_command(deliver.deliver)
 
 
 _register_commands()
