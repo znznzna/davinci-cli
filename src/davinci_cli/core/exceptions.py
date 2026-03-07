@@ -91,3 +91,16 @@ class EditionError(DavinciCLIError):
         super().__init__(
             f"This feature requires DaVinci Resolve {required}, but {actual} edition is running."
         )
+
+
+class SchemaNotFoundError(DavinciCLIError):
+    """指定されたスキーマが見つからない。"""
+
+    exit_code = 3
+
+    def __init__(self, command: str, available: list[str]) -> None:
+        self.command = command
+        self.available = available
+        super().__init__(
+            f"Unknown command: {command}. Available: {', '.join(available)}"
+        )
