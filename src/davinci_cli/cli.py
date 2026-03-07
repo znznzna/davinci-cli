@@ -81,10 +81,11 @@ def dr(ctx: click.Context, pretty: bool, verbose: bool, debug: bool) -> None:
 
 
 def _register_commands() -> None:
-    from davinci_cli.commands import schema, system
+    from davinci_cli.commands import project, schema, system
 
     dr.add_command(system.system)
     dr.add_command(schema.schema)
+    dr.add_command(project.project)
 
 
 _register_commands()
