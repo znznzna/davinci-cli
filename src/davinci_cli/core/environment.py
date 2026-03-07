@@ -71,18 +71,25 @@ def get_default_paths(platform: str) -> dict[str, str]:
     )
 
 
+_REQUIRED_VARS = ("RESOLVE_SCRIPT_API", "RESOLVE_SCRIPT_LIB", "RESOLVE_MODULES")
+
+
 def setup_environment() -> None:
     """環境変数を設定し、Modules ディレクトリを sys.path に追加する。
 
     既存の環境変数がある場合は上書きしない。
+    全ての必須環境変数が既に設定済みの場合はプラットフォームチェックをスキップする
+    （Linux 等で手動設定されたケースに対応）。
     """
-    platform = _current_platform()
-    defaults = get_default_paths(platform)
+    all_set = all(key in os.environ for key in _REQUIRED_VARS)
 
-    for key, default_value in defaults.items():
-        if key not in os.environ:
-            os.environ[key] = default_value
+    if not all_set:
+        platform = _current_platform()
+        defaults = get_default_paths(platform)
+        for key, default_value in defaults.items():
+            if key not in os.environ:
+                os.environ[key] = default_value
 
-    modules_path = os.environ["RESOLVE_MODULES"]
-    if modules_path not in sys.path:
+    modules_path = os.environ.get("RESOLVE_MODULES", "")
+    if modules_path and modules_path not in sys.path:
         sys.path.insert(0, modules_path)

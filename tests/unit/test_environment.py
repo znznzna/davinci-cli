@@ -73,3 +73,18 @@ class TestSetupEnvironment:
 
         modules_path = os.environ["RESOLVE_MODULES"]
         assert modules_path in sys.path
+
+    def test_manual_env_skips_platform_check(self, monkeypatch):
+        """全環境変数が手動設定済みの場合、プラットフォームチェックをスキップする（Linux対応）"""
+        monkeypatch.setenv("RESOLVE_SCRIPT_API", "/opt/resolve/scripting")
+        monkeypatch.setenv("RESOLVE_SCRIPT_LIB", "/opt/resolve/libs")
+        monkeypatch.setenv("RESOLVE_MODULES", "/opt/resolve/modules")
+
+        with patch(
+            "davinci_cli.core.environment._current_platform",
+            return_value="linux",
+        ):
+            setup_environment()  # DavinciEnvironmentError が発生しないこと
+
+        assert os.environ["RESOLVE_SCRIPT_API"] == "/opt/resolve/scripting"
+        assert "/opt/resolve/modules" in sys.path
