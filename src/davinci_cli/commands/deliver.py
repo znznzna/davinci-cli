@@ -183,7 +183,10 @@ def deliver_start_impl(
 
     project = _get_current_project()
     if job_ids:
-        for jid in job_ids:
+        validated_ids = [j["job_id"] for j in jobs]
+        if not validated_ids:
+            raise ValidationError(f"No matching jobs found for IDs: {job_ids}")
+        for jid in validated_ids:
             project.StartRendering(jid)
     else:
         project.StartRendering()

@@ -1,8 +1,9 @@
 """E2E スモークテスト — MockResolve で全コマンドグループの疎通確認。
 
-パッチパスは davinci_cli.core.connection.get_resolve を使用する。
+パッチパスは各コマンドモジュールの get_resolve を使用する（point-of-use patching）。
 """
 import asyncio
+import contextlib
 import json
 from unittest.mock import patch
 
@@ -12,13 +13,23 @@ from click.testing import CliRunner
 from davinci_cli.cli import dr
 from tests.e2e.mock_resolve import build_mock_resolve
 
-RESOLVE_PATCH = "davinci_cli.core.connection.get_resolve"
+_PATCH_TARGETS = [
+    "davinci_cli.commands.system.get_resolve",
+    "davinci_cli.commands.project.get_resolve",
+    "davinci_cli.commands.timeline.get_resolve",
+    "davinci_cli.commands.clip.get_resolve",
+    "davinci_cli.commands.color.get_resolve",
+    "davinci_cli.commands.media.get_resolve",
+    "davinci_cli.commands.deliver.get_resolve",
+]
 
 
 @pytest.fixture
 def mock_resolve():
     resolve = build_mock_resolve()
-    with patch(RESOLVE_PATCH, return_value=resolve):
+    with contextlib.ExitStack() as stack:
+        for target in _PATCH_TARGETS:
+            stack.enter_context(patch(target, return_value=resolve))
         yield resolve
 
 
