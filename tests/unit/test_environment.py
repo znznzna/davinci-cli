@@ -89,3 +89,17 @@ class TestSetupEnvironment:
 
         assert os.environ["RESOLVE_SCRIPT_API"] == "/opt/resolve/scripting"
         assert "/opt/resolve/modules" in sys.path
+
+    def test_empty_env_vars_treated_as_unset(self, monkeypatch):
+        """空の環境変数は未設定として扱い、デフォルト値で上書きする"""
+        monkeypatch.setenv("RESOLVE_SCRIPT_API", "")
+        monkeypatch.setenv("RESOLVE_SCRIPT_LIB", "")
+        monkeypatch.setenv("RESOLVE_MODULES", "")
+
+        with patch(
+            "davinci_cli.core.environment._current_platform",
+            return_value=PLATFORM_MACOS,
+        ):
+            setup_environment()
+
+        assert os.environ["RESOLVE_SCRIPT_API"].startswith("/Library")

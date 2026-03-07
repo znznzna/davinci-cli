@@ -90,6 +90,11 @@ class TestValidatePath:
         result = validate_path(str(symlink))
         assert result == real_file.resolve()
 
+    def test_null_byte_in_path_rejected(self):
+        """パスに null byte を含む場合は ValidationError"""
+        with pytest.raises(ValidationError, match="invalid path"):
+            validate_path("/media/file\x00.mov")
+
 
 # --- validate_resource_id ---
 

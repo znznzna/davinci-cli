@@ -60,7 +60,10 @@ def validate_path(
     if _PATH_TRAVERSAL_RE.search(decoded):
         raise ValidationError(field="path", reason="path traversal detected")
 
-    resolved = Path(path).resolve()
+    try:
+        resolved = Path(path).resolve()
+    except (ValueError, OSError) as exc:
+        raise ValidationError(field="path", reason=f"invalid path: {exc}") from exc
 
     # 拡張子チェック
     if allowed_extensions is not None:

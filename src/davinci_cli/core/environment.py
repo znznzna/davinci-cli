@@ -78,13 +78,13 @@ def setup_environment() -> None:
     全ての必須環境変数が既に設定済みの場合はプラットフォームチェックをスキップする
     （Linux 等で手動設定されたケースに対応）。
     """
-    all_set = all(key in os.environ for key in _REQUIRED_VARS)
+    all_set = all(os.environ.get(key) for key in _REQUIRED_VARS)
 
     if not all_set:
         platform = _current_platform()
         defaults = get_default_paths(platform)
         for key, default_value in defaults.items():
-            if key not in os.environ:
+            if not os.environ.get(key):
                 os.environ[key] = default_value
 
     modules_path = os.environ.get("RESOLVE_MODULES", "")
