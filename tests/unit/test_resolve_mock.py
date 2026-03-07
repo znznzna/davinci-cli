@@ -1,5 +1,4 @@
-import pytest
-from tests.mocks.resolve_mock import MockResolve, MockProjectManager, MockProject
+from tests.mocks.resolve_mock import MockProject, MockProjectManager, MockResolve
 
 
 class TestMockResolve:
@@ -59,6 +58,7 @@ class TestMockProject:
     def test_scriptapp_returns_resolve(self):
         """DaVinciResolveScript.scriptapp() のモック"""
         from tests.mocks.resolve_mock import MockDaVinciResolveScript
+
         dvr = MockDaVinciResolveScript()
         resolve = dvr.scriptapp("Resolve")
         assert isinstance(resolve, MockResolve)

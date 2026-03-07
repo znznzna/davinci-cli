@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 CI_CONFIG = Path(".github/workflows/ci.yml")
 
 

@@ -1,13 +1,14 @@
 import os
 import sys
 from unittest.mock import patch
+
 import pytest
 
 from davinci_cli.core.environment import (
-    get_default_paths,
-    setup_environment,
     PLATFORM_MACOS,
     PLATFORM_WINDOWS,
+    get_default_paths,
+    setup_environment,
 )
 from davinci_cli.core.exceptions import DavinciEnvironmentError
 

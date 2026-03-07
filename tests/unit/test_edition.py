@@ -1,11 +1,12 @@
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
+
 from davinci_cli.core.edition import (
-    get_edition,
-    require_studio,
     EDITION_FREE,
     EDITION_STUDIO,
+    get_edition,
+    require_studio,
 )
 from davinci_cli.core.exceptions import EditionError
 
@@ -13,16 +14,12 @@ from davinci_cli.core.exceptions import EditionError
 class TestGetEdition:
     def test_detects_studio(self):
         mock_resolve = MagicMock()
-        mock_resolve.GetVersion.return_value = {
-            "product": "DaVinci Resolve Studio"
-        }
+        mock_resolve.GetVersion.return_value = {"product": "DaVinci Resolve Studio"}
         assert get_edition(mock_resolve) == EDITION_STUDIO
 
     def test_detects_free(self):
         mock_resolve = MagicMock()
-        mock_resolve.GetVersion.return_value = {
-            "product": "DaVinci Resolve"
-        }
+        mock_resolve.GetVersion.return_value = {"product": "DaVinci Resolve"}
         assert get_edition(mock_resolve) == EDITION_FREE
 
     def test_unknown_product_treated_as_free(self):

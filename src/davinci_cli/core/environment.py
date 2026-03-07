@@ -8,6 +8,7 @@
 Linux は明示的にサポートしない。DaVinci Resolve の Linux 向け Python API パスが
 バージョン・ディストリビューションによって異なるため、環境変数を手動設定することを推奨する。
 """
+
 from __future__ import annotations
 
 import os
@@ -20,12 +21,10 @@ PLATFORM_WINDOWS = "win32"
 
 _MACOS_DEFAULTS: dict[str, str] = {
     "RESOLVE_SCRIPT_API": (
-        "/Library/Application Support/Blackmagic Design/"
-        "DaVinci Resolve/Developer/Scripting/"
+        "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/"
     ),
     "RESOLVE_SCRIPT_LIB": (
-        "/Applications/DaVinci Resolve/DaVinci Resolve.app/"
-        "Contents/Libraries/Fusion/"
+        "/Applications/DaVinci Resolve/DaVinci Resolve.app/Contents/Libraries/Fusion/"
     ),
     "RESOLVE_MODULES": (
         "/Library/Application Support/Blackmagic Design/"
@@ -38,9 +37,7 @@ _WINDOWS_DEFAULTS: dict[str, str] = {
         r"C:\ProgramData\Blackmagic Design\DaVinci Resolve"
         r"\Support\Developer\Scripting\\"
     ),
-    "RESOLVE_SCRIPT_LIB": (
-        r"C:\Program Files\Blackmagic Design\DaVinci Resolve\\"
-    ),
+    "RESOLVE_SCRIPT_LIB": (r"C:\Program Files\Blackmagic Design\DaVinci Resolve\\"),
     "RESOLVE_MODULES": (
         r"C:\ProgramData\Blackmagic Design\DaVinci Resolve"
         r"\Support\Developer\Scripting\Modules\\"

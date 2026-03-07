@@ -1,12 +1,13 @@
 import pytest
+
 from davinci_cli.core.exceptions import (
     DavinciCLIError,
-    ResolveNotRunningError,
-    ProjectNotOpenError,
-    ProjectNotFoundError,
-    ValidationError,
     DavinciEnvironmentError,
     EditionError,
+    ProjectNotFoundError,
+    ProjectNotOpenError,
+    ResolveNotRunningError,
+    ValidationError,
 )
 
 
@@ -72,7 +73,7 @@ def test_exceptions_are_catchable_as_base():
 
 
 def test_exit_code_uniqueness():
-    """各例外の exit_code が一意であること（ProjectNotFoundError は ProjectNotOpenError と同じ 2 で許容）"""
+    """各例外の exit_code が一意であること (ProjectNotFoundError=2は許容)"""
     codes = {
         ResolveNotRunningError: 1,
         ProjectNotOpenError: 2,

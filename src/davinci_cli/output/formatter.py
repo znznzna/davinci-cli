@@ -7,6 +7,7 @@
   - TTY + pretty=True: Rich を使った人間可読形式
   - --fields: 任意の Read コマンドでフィールド絞り込み
 """
+
 from __future__ import annotations
 
 import json

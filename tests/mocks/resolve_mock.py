@@ -14,6 +14,7 @@ API正確性に関する注意:
     dvr = MockDaVinciResolveScript()
     resolve = dvr.scriptapp("Resolve")
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -59,9 +60,7 @@ class MockProject:
     ) -> None:
         self._name = name
         self._timeline_count = timeline_count
-        self._timelines = [
-            MockTimeline(f"Timeline {i + 1}") for i in range(timeline_count)
-        ]
+        self._timelines = [MockTimeline(f"Timeline {i + 1}") for i in range(timeline_count)]
 
     def GetName(self) -> str:
         return self._name
@@ -147,7 +146,13 @@ class MockResolve:
 
     def OpenPage(self, page_name: str) -> bool:
         valid_pages = {
-            "media", "cut", "edit", "fusion", "color", "fairlight", "deliver",
+            "media",
+            "cut",
+            "edit",
+            "fusion",
+            "color",
+            "fairlight",
+            "deliver",
         }
         return page_name in valid_pages
 

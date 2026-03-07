@@ -8,6 +8,7 @@
 全コマンドは 'davinci_cli.core.connection.get_resolve' を使用する。
 旧名 'resolve_bridge' は使わない。
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -31,7 +32,8 @@ def _import_resolve_script() -> Any:
     """
     setup_environment()
     try:
-        import DaVinciResolveScript as dvr  # type: ignore[import]
+        import DaVinciResolveScript as dvr  # type: ignore[import-not-found]
+
         return dvr
     except ImportError as exc:
         raise DavinciEnvironmentError(

@@ -1,10 +1,9 @@
 import json
-import pytest
 from unittest.mock import patch
 
 from davinci_cli.output.formatter import (
-    is_tty,
     filter_fields,
+    is_tty,
     output,
 )
 

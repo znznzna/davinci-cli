@@ -1,10 +1,12 @@
-import pytest
 from pathlib import Path
-from davinci_cli.core.validation import validate_path, validate_resource_id, validate_string
-from davinci_cli.core.exceptions import ValidationError
 
+import pytest
+
+from davinci_cli.core.exceptions import ValidationError
+from davinci_cli.core.validation import validate_path, validate_resource_id, validate_string
 
 # --- validate_path ---
+
 
 class TestValidatePath:
     def test_valid_path_returns_resolved_path(self, tmp_path):
@@ -91,6 +93,7 @@ class TestValidatePath:
 
 # --- validate_resource_id ---
 
+
 class TestValidateResourceId:
     def test_valid_id_passes(self):
         assert validate_resource_id("proj-abc123") == "proj-abc123"
@@ -117,6 +120,7 @@ class TestValidateResourceId:
 
 
 # --- validate_string ---
+
 
 class TestValidateString:
     def test_valid_string_passes(self):

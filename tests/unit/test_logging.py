@@ -1,7 +1,6 @@
 import logging
-import pytest
 
-from davinci_cli.core.logging import setup_logging, get_logger
+from davinci_cli.core.logging import get_logger, setup_logging
 
 
 class TestSetupLogging:

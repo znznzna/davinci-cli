@@ -12,6 +12,7 @@ API正確性に関する注意:
   新しいバージョンの DaVinci Resolve で動作確認する際は、
   まず実際の GetVersion() の戻り値を確認し、必要に応じて判定ロジックを修正すること。
 """
+
 from __future__ import annotations
 
 from typing import Any

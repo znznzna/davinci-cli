@@ -1,8 +1,9 @@
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from davinci_cli.core.connection import get_resolve, clear_resolve_cache
-from davinci_cli.core.exceptions import ResolveNotRunningError, DavinciEnvironmentError
+import pytest
+
+from davinci_cli.core.connection import clear_resolve_cache, get_resolve
+from davinci_cli.core.exceptions import DavinciEnvironmentError, ResolveNotRunningError
 
 
 class TestGetResolve:
@@ -28,15 +29,17 @@ class TestGetResolve:
         mock_dvr = MagicMock()
         mock_dvr.scriptapp.return_value = None
 
-        with patch(
-            "davinci_cli.core.connection._import_resolve_script",
-            return_value=mock_dvr,
+        with (
+            patch(
+                "davinci_cli.core.connection._import_resolve_script",
+                return_value=mock_dvr,
+            ),
+            pytest.raises(ResolveNotRunningError),
         ):
-            with pytest.raises(ResolveNotRunningError):
-                get_resolve()
+            get_resolve()
 
     def test_caches_resolve_object(self):
-        """Resolve オブジェクト自体もキャッシュされ、2回目の呼び出しで scriptapp() が呼ばれないこと"""
+        """Resolve オブジェクトがキャッシュされ、scriptapp()は1回のみ呼ばれる"""
         mock_resolve = MagicMock(name="MockResolve")
         mock_dvr = MagicMock()
         mock_dvr.scriptapp.return_value = mock_resolve
@@ -53,7 +56,7 @@ class TestGetResolve:
         assert mock_dvr.scriptapp.call_count == 1
 
     def test_clear_cache_clears_both_module_and_resolve(self):
-        """clear_resolve_cache() で DaVinciResolveScript モジュールと Resolve オブジェクト両方のキャッシュをクリアする"""
+        """clear_resolve_cache()でモジュールとResolve両方のキャッシュをクリア"""
         mock_resolve = MagicMock(name="MockResolve")
         mock_dvr = MagicMock()
         mock_dvr.scriptapp.return_value = mock_resolve
@@ -70,9 +73,11 @@ class TestGetResolve:
         assert mock_dvr.scriptapp.call_count == 2
 
     def test_import_error_propagates_as_environment_error(self):
-        with patch(
-            "davinci_cli.core.connection._import_resolve_script",
-            side_effect=ImportError("No module named 'DaVinciResolveScript'"),
+        with (
+            patch(
+                "davinci_cli.core.connection._import_resolve_script",
+                side_effect=ImportError("No module named 'DaVinciResolveScript'"),
+            ),
+            pytest.raises(DavinciEnvironmentError, match="DaVinciResolveScript"),
         ):
-            with pytest.raises(DavinciEnvironmentError, match="DaVinciResolveScript"):
-                get_resolve()
+            get_resolve()
