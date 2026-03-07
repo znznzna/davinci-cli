@@ -24,6 +24,7 @@ dev = [
 
 [project.scripts]
 dr = "davinci_cli.cli:dr"
+dr-mcp = "davinci_cli.mcp.mcp_server:mcp.run"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/davinci_cli"]
