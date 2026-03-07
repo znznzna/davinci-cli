@@ -18,7 +18,7 @@
 
 1. エントリポイント名を `cli` → `dr` に統一（Phase 1 から）
 2. `EnvironmentError` → `DavinciEnvironmentError` に改名（Python組み込み衝突回避）
-3. `validate_path` を `core/validation.py` に統合（`Path.resolve()` + `allowed_extensions` 対応）。`security.py` は作らない
+3. `validate_path` を `core/validation.py` に統合（`Path.resolve()` + `allowed_extensions` 対応）。`security.py` は作らない。パストラバーサル防止のみ（許可ディレクトリリスト不要）
 4. exit_code 体系を `exceptions.py` に正規定義（1〜5）
 5. `get_resolve()` で Resolve オブジェクト自体もキャッシュ
 6. `GetVersion()` API 正確性コメント追加
@@ -27,6 +27,7 @@
 9. CI/CD（GitHub Actions）追加
 10. Linux は明示的にサポートしない
 11. `ProjectNotFoundError` を例外に追加
+12. `--fields` は表示フィルタ。schema は常にフルレスポンスの型を定義する（`--fields` 適用後の部分出力は schema 対象外）
 
 ---
 
@@ -542,6 +543,12 @@ validate_path() は Phase 3 の security.py に分離していた版を統合済
 - パストラバーサル検出（URLデコード後も検査）
 
 security.py は作らない。パス検証はこのモジュールに一元化する。
+
+設計判断: validate_path() はパストラバーサル防止（Path.resolve() + '..' 拒絶）のみ。
+許可ディレクトリリスト（allowed_directories）は意図的に実装しない。
+理由: DaVinci Resolve のメディアファイルは外付け SSD、NAS、ネットワークドライブ等の
+任意パスに存在するため、許可ディレクトリを事前に列挙することが不可能。
+パストラバーサル防止のみで十分なセキュリティを確保できる。
 """
 from __future__ import annotations
 
@@ -571,6 +578,10 @@ def validate_path(
     - パストラバーサル（../ など）を拒絶（URLデコード後も検査）
     - シンボリックリンクは resolve() で実体パスに解決
     - allowed_extensions 指定時は拡張子を検査（大文字小文字区別なし）
+
+    許可ディレクトリリストは意図的に実装していない。
+    DaVinci Resolve のメディアは外付け SSD/NAS 等の任意パスに存在するため、
+    パストラバーサル防止（Path.resolve() + '..' 拒絶）のみで制限する。
 
     Returns:
         Path: resolve() 済みの Path オブジェクト
@@ -1827,7 +1838,6 @@ git commit -m "feat: tests/mocks/resolve_mock.py — API正確性コメント付
 ```python
 # tests/unit/test_ci_config.py
 from pathlib import Path
-import yaml
 
 
 CI_CONFIG = Path(".github/workflows/ci.yml")
@@ -1838,11 +1848,12 @@ def test_ci_config_exists():
     assert CI_CONFIG.exists(), ".github/workflows/ci.yml must exist"
 
 
-def test_ci_config_valid_yaml():
-    """CI設定ファイルが有効なYAMLであること"""
+def test_ci_config_is_valid_yaml_structure():
+    """CI設定ファイルが基本的なYAML構造を持つこと（pyyaml不要、文字列パターンで検証）"""
     content = CI_CONFIG.read_text()
-    config = yaml.safe_load(content)
-    assert isinstance(config, dict)
+    # YAML の基本構造: "name:" と "jobs:" が存在する
+    assert "name:" in content
+    assert "jobs:" in content
 
 
 def test_ci_has_test_job():
@@ -1864,12 +1875,10 @@ def test_ci_has_type_check_job():
 
 
 def test_ci_triggers_on_push_and_pr():
-    """push と pull_request でトリガーされること"""
+    """push と pull_request でトリガーされること（文字列パターンマッチで検証）"""
     content = CI_CONFIG.read_text()
-    config = yaml.safe_load(content)
-    triggers = config.get(True, {})  # YAML の "on" は True としてパースされる
-    assert "push" in triggers or "push" in str(config)
-    assert "pull_request" in triggers or "pull_request" in str(config)
+    assert "push:" in content
+    assert "pull_request:" in content
 ```
 
 **Step 2: 失敗を確認**
@@ -1938,17 +1947,8 @@ jobs:
 Run: `python -m pytest tests/unit/test_ci_config.py -v`
 Expected: PASS
 
-注意: テストに `pyyaml` が必要。`pyproject.toml` の dev 依存に追加すること:
-```toml
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0",
-    "pytest-cov",
-    "ruff>=0.4",
-    "mypy>=1.10",
-    "pyyaml>=6.0",
-]
-```
+注意: テストでは `pyyaml` を使わず文字列パターンマッチで CI 設定を検証する。
+`pyproject.toml` の dev 依存に `pyyaml` を追加する必要はない。
 
 **Step 5: コミット**
 

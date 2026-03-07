@@ -25,6 +25,27 @@
 3. `dry_run=True` デフォルト設計を MCP 側に明文化
 4. E2E テストのパッチパスを `davinci_cli.core.connection.get_resolve` に修正
 5. `ValueError` → カスタム例外に統一
+6. Task 18-20 で各コマンド実装時に cli.py に color/media/deliver を登録する
+7. Task 20 のタスク名から「--dry-run必須」を削除（CLI の default=False は他コマンドと一貫性を保つ）
+8. `color.apply-lut` の `output_model` を `LutApplyOutput` に修正（`LutApplyInput` は誤り）
+9. `deliver.preset.list` の `output_model` を `PresetListOutput` に修正（`RenderJobInfo` は誤り）
+10. `media_import_impl` で `FileNotFoundError` を `ValidationError` にラップ
+11. MCP サーバーのファイル名を `mcp_server.py` に統一（タスク名と一致）
+12. 全コマンドの schema 登録を網羅（media import/folder create/delete, deliver preset.load/stop/status 等）
+13. schema 登録の `output_model` を各 `_impl` 関数の実際の戻り値と一致するよう修正:
+    - `color.copy-grade` → `ColorCopyGradeOutput`（`ColorResetOutput` から変更）
+    - `color.paste-grade` → `ColorPasteGradeOutput`（`ColorResetOutput` から変更）
+    - `color.node.add` → `NodeAddOutput`（`NodeInfo` から変更）
+    - `color.node.delete` → `NodeDeleteOutput`（`NodeInfo` から変更）
+    - `color.still.grab` → `StillGrabOutput`（`StillInfo` から変更）
+    - `color.still.apply` → `StillApplyOutput`（`StillInfo` から変更）
+    - `media.folder.create` → `FolderCreateOutput`（`FolderInfo` から変更）
+    - `media.folder.delete` → `FolderDeleteOutput`（`FolderInfo` から変更）
+    - `deliver.preset.load` → `PresetLoadOutput`（`PresetListOutput` から変更）
+    - `deliver.add-job` → `DeliverAddJobOutput`（`RenderJobInfo` から変更）
+14. `deliver.add_job` → `deliver.add-job`、`deliver.list_jobs` → `deliver.list-jobs` に命名規則統一（ハイフン）
+15. `deliver.start` に `input_model=DeliverStartInput` を追加（`job_ids` パラメータ対応）
+16. `--fields` は表示フィルタ。schema は常にフルレスポンスの型を定義する（`--fields` 適用後の部分出力は schema 対象外）
 
 ---
 
@@ -32,6 +53,7 @@
 
 **Files:**
 - Create: `src/davinci_cli/commands/color.py`
+- Modify: `src/davinci_cli/cli.py`（color コマンドを `_register_commands()` に追加）
 - Test: `tests/unit/test_color.py`
 
 **Step 1: 失敗するテストを書く**
@@ -214,13 +236,69 @@ class LutApplyInput(BaseModel):
     clip_index: int
     lut_path: str
 
+class LutApplyOutput(BaseModel):
+    applied: str | None = None
+    clip_index: int
+    dry_run: bool | None = None
+    action: str | None = None
+    lut_path: str | None = None
+
+class ColorResetOutput(BaseModel):
+    reset: bool | None = None
+    clip_index: int
+    dry_run: bool | None = None
+    action: str | None = None
+
+class ColorCopyGradeOutput(BaseModel):
+    """color.copy-grade の戻り値。"""
+    copied_from: int
+
+class ColorPasteGradeOutput(BaseModel):
+    """color.paste-grade の戻り値。"""
+    pasted_to: int | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+    to_index: int | None = None
+
 class NodeInfo(BaseModel):
+    """color.node.list の戻り値の各要素。"""
     index: int
     label: str | None = None
 
+class NodeAddOutput(BaseModel):
+    """color.node.add の戻り値。"""
+    added: bool | None = None
+    clip_index: int | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+class NodeDeleteOutput(BaseModel):
+    """color.node.delete の戻り値。"""
+    deleted: bool | None = None
+    clip_index: int | None = None
+    node_index: int | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
 class StillInfo(BaseModel):
+    """color.still.list の戻り値の各要素。"""
     index: int
     label: str | None = None
+
+class StillGrabOutput(BaseModel):
+    """color.still.grab の戻り値。"""
+    grabbed: bool | None = None
+    clip_index: int | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+class StillApplyOutput(BaseModel):
+    """color.still.apply の戻り値。"""
+    applied: bool | None = None
+    clip_index: int | None = None
+    still_index: int | None = None
+    dry_run: bool | None = None
+    action: str | None = None
 
 
 # --- Helper ---
@@ -514,9 +592,30 @@ def still_apply_cmd(
 
 # --- Schema Registration ---
 
-register_schema("color.apply-lut", output_model=LutApplyInput, input_model=LutApplyInput)
+register_schema("color.apply-lut", output_model=LutApplyOutput, input_model=LutApplyInput)
+register_schema("color.reset", output_model=ColorResetOutput)
+register_schema("color.copy-grade", output_model=ColorCopyGradeOutput)
+register_schema("color.paste-grade", output_model=ColorPasteGradeOutput)
 register_schema("color.node.list", output_model=NodeInfo)
+register_schema("color.node.add", output_model=NodeAddOutput)
+register_schema("color.node.delete", output_model=NodeDeleteOutput)
 register_schema("color.still.list", output_model=StillInfo)
+register_schema("color.still.grab", output_model=StillGrabOutput)
+register_schema("color.still.apply", output_model=StillApplyOutput)
+```
+
+**Step 3.5: cli.py に color コマンドを登録**
+
+`src/davinci_cli/cli.py` の `_register_commands()` に color を追加:
+```python
+def _register_commands() -> None:
+    from davinci_cli.commands import system, schema, project, timeline, clip, color
+    dr.add_command(system.system)
+    dr.add_command(schema.schema)
+    dr.add_command(project.project)
+    dr.add_command(timeline.timeline)
+    dr.add_command(clip.clip)
+    dr.add_command(color.color)
 ```
 
 **Step 4: 通過を確認**
@@ -527,8 +626,8 @@ Expected: PASS
 **Step 5: コミット**
 
 ```bash
-git add src/davinci_cli/commands/color.py tests/unit/test_color.py
-git commit -m "feat: commands/color.py — core/validation.py使用、security.py不使用"
+git add src/davinci_cli/commands/color.py src/davinci_cli/cli.py tests/unit/test_color.py
+git commit -m "feat: commands/color.py — core/validation.py使用、security.py不使用、cli.py登録"
 ```
 
 ---
@@ -537,6 +636,7 @@ git commit -m "feat: commands/color.py — core/validation.py使用、security.p
 
 **Files:**
 - Create: `src/davinci_cli/commands/media.py`
+- Modify: `src/davinci_cli/cli.py`（media コマンドを `_register_commands()` に追加）
 - Test: `tests/unit/test_media.py`
 
 **Step 1: 失敗するテストを書く**
@@ -615,7 +715,8 @@ class TestMediaImportImpl:
             media_import_impl(paths=["../../../etc/shadow"])
 
     def test_file_not_found(self):
-        with pytest.raises(FileNotFoundError):
+        """FileNotFoundError ではなく ValidationError にラップされること"""
+        with pytest.raises(ValidationError, match="not found"):
             media_import_impl(paths=["/nonexistent/file.mp4"])
 
     def test_import_success(self, mock_resolve, tmp_path):
@@ -693,9 +794,34 @@ class MediaItem(BaseModel):
     duration: str | None = None
     fps: str | None = None
 
+class MediaImportInput(BaseModel):
+    paths: list[str]
+
+class MediaImportOutput(BaseModel):
+    imported_count: int
+    paths: list[str]
+
 class FolderInfo(BaseModel):
+    """media.folder.list の戻り値の各要素。"""
     name: str
     clip_count: int | None = None
+
+class FolderCreateOutput(BaseModel):
+    """media.folder.create の戻り値。"""
+    created: str
+
+class FolderCreateInput(BaseModel):
+    name: str
+
+class FolderDeleteOutput(BaseModel):
+    """media.folder.delete の戻り値。"""
+    deleted: str | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+    name: str | None = None
+
+class FolderDeleteInput(BaseModel):
+    name: str
 
 
 # --- Helper ---
@@ -755,11 +881,18 @@ def media_list_impl(
 
 def media_import_impl(paths: list[str]) -> dict:
     # 全パスを core/validation.py の validate_path で検証
+    # FileNotFoundError は ValidationError にラップする
+    # （CLIのグローバルハンドラは DavinciCLIError を構造化出力する。
+    #   FileNotFoundError をそのまま送出するとフォールバック捕捉になるが、
+    #   ValidationError にラップすることで exit_code=3 と明確なエラー種別を提供する）
     validated: list[str] = []
     for p in paths:
         vp = validate_path(p)
         if not vp.exists():
-            raise FileNotFoundError(f"File not found: {p}")
+            raise ValidationError(
+                field="path",
+                reason=f"File not found: {p}",
+            )
         validated.append(str(vp))
 
     media_pool = _get_media_pool()
@@ -868,7 +1001,25 @@ def folder_delete_cmd(ctx: click.Context, name: str, dry_run: bool) -> None:
 # --- Schema Registration ---
 
 register_schema("media.list", output_model=MediaItem)
+register_schema("media.import", output_model=MediaImportOutput, input_model=MediaImportInput)
 register_schema("media.folder.list", output_model=FolderInfo)
+register_schema("media.folder.create", output_model=FolderCreateOutput, input_model=FolderCreateInput)
+register_schema("media.folder.delete", output_model=FolderDeleteOutput, input_model=FolderDeleteInput)
+```
+
+**Step 3.5: cli.py に media コマンドを登録**
+
+`src/davinci_cli/cli.py` の `_register_commands()` に media を追加:
+```python
+def _register_commands() -> None:
+    from davinci_cli.commands import system, schema, project, timeline, clip, color, media
+    dr.add_command(system.system)
+    dr.add_command(schema.schema)
+    dr.add_command(project.project)
+    dr.add_command(timeline.timeline)
+    dr.add_command(clip.clip)
+    dr.add_command(color.color)
+    dr.add_command(media.media)
 ```
 
 **Step 4: 通過を確認**
@@ -879,16 +1030,17 @@ Expected: PASS
 **Step 5: コミット**
 
 ```bash
-git add src/davinci_cli/commands/media.py tests/unit/test_media.py
-git commit -m "feat: commands/media.py — core/validation.py使用、パス検証付きインポート"
+git add src/davinci_cli/commands/media.py src/davinci_cli/cli.py tests/unit/test_media.py
+git commit -m "feat: commands/media.py — core/validation.py使用、FileNotFoundError→ValidationError、cli.py登録"
 ```
 
 ---
 
-### Task 20: commands/deliver.py — dr deliver（--dry-run必須）
+### Task 20: commands/deliver.py — dr deliver（--dry-run 推奨）
 
 **Files:**
 - Create: `src/davinci_cli/commands/deliver.py`
+- Modify: `src/davinci_cli/cli.py`（deliver コマンドを `_register_commands()` に追加）
 - Test: `tests/unit/test_deliver.py`
 
 **Step 1: 失敗するテストを書く**
@@ -1028,8 +1180,9 @@ Expected: FAIL (ImportError)
 # src/davinci_cli/commands/deliver.py
 """dr deliver — レンダリング＆デリバリーコマンド。
 
-deliver start は --dry-run 必須のワークフローを推奨する。
-_impl 関数の dry_run デフォルトは False（MCP 側でのみ True）。
+deliver start は --dry-run による事前確認を推奨する。
+_impl 関数の dry_run デフォルトは False（他コマンドと一貫性を保つ）。
+MCP 側では dry_run=True がデフォルト（破壊的操作の安全性確保）。
 """
 from __future__ import annotations
 
@@ -1059,6 +1212,45 @@ class RenderJobInfo(BaseModel):
     timeline_name: str | None = None
     status: str | None = None
     progress: float | None = None
+
+class PresetListOutput(BaseModel):
+    """deliver.preset.list の戻り値。プリセット名のリスト。"""
+    name: str
+
+class PresetLoadOutput(BaseModel):
+    """deliver.preset.load の戻り値。"""
+    loaded: str
+
+class PresetLoadInput(BaseModel):
+    name: str
+
+class DeliverAddJobOutput(BaseModel):
+    """deliver.add-job の戻り値。"""
+    job_id: str | None = None
+    output_dir: str | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+    job: dict | None = None
+
+class DeliverStartInput(BaseModel):
+    """deliver.start の入力パラメータ。"""
+    job_ids: list[str] | None = None
+
+class DeliverStartOutput(BaseModel):
+    """deliver.start の戻り値。"""
+    would_render: bool | None = None
+    rendering_started: bool | None = None
+    jobs: list[dict] | None = None
+    job_count: int | None = None
+    estimated_seconds: int | None = None
+
+class DeliverStatusOutput(BaseModel):
+    """deliver.status の戻り値。"""
+    jobs: list[dict]
+
+class DeliverStopOutput(BaseModel):
+    """deliver.stop の戻り値。"""
+    stopped: bool
 
 
 # --- Helper ---
@@ -1247,10 +1439,31 @@ def status(ctx: click.Context) -> None:
 
 # --- Schema Registration ---
 
-register_schema("deliver.preset.list", output_model=RenderJobInfo)
-register_schema("deliver.add_job", output_model=RenderJobInfo, input_model=RenderJobInput)
-register_schema("deliver.list_jobs", output_model=RenderJobInfo)
-register_schema("deliver.start", output_model=RenderJobInfo)
+register_schema("deliver.preset.list", output_model=PresetListOutput)
+register_schema("deliver.preset.load", output_model=PresetLoadOutput, input_model=PresetLoadInput)
+register_schema("deliver.add-job", output_model=DeliverAddJobOutput, input_model=RenderJobInput)
+register_schema("deliver.list-jobs", output_model=RenderJobInfo)
+register_schema("deliver.start", output_model=DeliverStartOutput, input_model=DeliverStartInput)
+register_schema("deliver.stop", output_model=DeliverStopOutput)
+register_schema("deliver.status", output_model=DeliverStatusOutput)
+```
+
+**Step 3.5: cli.py に deliver コマンドを登録（最終形）**
+
+`src/davinci_cli/cli.py` の `_register_commands()` に deliver を追加:
+```python
+def _register_commands() -> None:
+    from davinci_cli.commands import (
+        system, schema, project, timeline, clip, color, media, deliver,
+    )
+    dr.add_command(system.system)
+    dr.add_command(schema.schema)
+    dr.add_command(project.project)
+    dr.add_command(timeline.timeline)
+    dr.add_command(clip.clip)
+    dr.add_command(color.color)
+    dr.add_command(media.media)
+    dr.add_command(deliver.deliver)
 ```
 
 **Step 4: 通過を確認**
@@ -1261,8 +1474,8 @@ Expected: PASS
 **Step 5: コミット**
 
 ```bash
-git add src/davinci_cli/commands/deliver.py tests/unit/test_deliver.py
-git commit -m "feat: commands/deliver.py — dry-run必須ワークフロー、Pydanticバリデーション付き"
+git add src/davinci_cli/commands/deliver.py src/davinci_cli/cli.py tests/unit/test_deliver.py
+git commit -m "feat: commands/deliver.py — dry-run推奨ワークフロー、schema戻り値修正、cli.py登録"
 ```
 
 ---
@@ -1271,7 +1484,7 @@ git commit -m "feat: commands/deliver.py — dry-run必須ワークフロー、P
 
 **Files:**
 - Create: `src/davinci_cli/mcp/__init__.py`
-- Create: `src/davinci_cli/mcp/server.py`
+- Create: `src/davinci_cli/mcp/mcp_server.py`（ファイル名をタスク名と一致させる）
 - Test: `tests/unit/test_mcp_server.py`
 
 **Step 1: 失敗するテストを書く**
@@ -1282,7 +1495,7 @@ import inspect
 import pytest
 from unittest.mock import patch, MagicMock
 
-from davinci_cli.mcp.server import mcp, mcp_error_handler
+from davinci_cli.mcp.mcp_server import mcp, mcp_error_handler
 
 
 class TestMCPServerSetup:
@@ -1371,7 +1584,7 @@ Expected: FAIL (ImportError)
 ```
 
 ```python
-# src/davinci_cli/mcp/server.py
+# src/davinci_cli/mcp/mcp_server.py
 """FastMCP サーバー — davinci-cli の全 _impl 関数を MCP tool として公開する。
 
 設計方針:
@@ -1796,7 +2009,7 @@ if __name__ == "__main__":
 ```toml
 [project.scripts]
 dr = "davinci_cli.cli:dr"
-dr-mcp = "davinci_cli.mcp.server:mcp.run"
+dr-mcp = "davinci_cli.mcp.mcp_server:mcp.run"
 ```
 
 **Step 4: 通過を確認**
@@ -1808,7 +2021,7 @@ Expected: PASS
 
 ```bash
 git add src/davinci_cli/mcp/ tests/unit/test_mcp_server.py pyproject.toml
-git commit -m "feat: MCP server — エラーハンドリングラッパー追加、dry_run=Trueデフォルト"
+git commit -m "feat: mcp_server.py — エラーハンドリングラッパー追加、dry_run=Trueデフォルト、ファイル名統一"
 ```
 
 ---
@@ -2151,11 +2364,11 @@ class TestSchemaSmoke:
 
 class TestMCPSmoke:
     def test_mcp_server_importable(self):
-        from davinci_cli.mcp.server import mcp
+        from davinci_cli.mcp.mcp_server import mcp
         assert mcp is not None
 
     def test_mcp_has_deliver_start_tool(self):
-        from davinci_cli.mcp.server import mcp
+        from davinci_cli.mcp.mcp_server import mcp
         tool_names = [t.name for t in mcp.tools]
         assert "deliver_start" in tool_names
 ```
@@ -2216,10 +2429,10 @@ src/davinci_cli/
 ├── commands/
 │   ├── color.py              # Task 18: core/validation.py使用
 │   ├── media.py              # Task 19: パス検証付きインポート
-│   └── deliver.py            # Task 20: dry-run必須ワークフロー
+│   └── deliver.py            # Task 20: dry-run推奨ワークフロー
 └── mcp/
     ├── __init__.py
-    └── server.py             # Task 21: エラーハンドリングラッパー、dry_run=True
+    └── mcp_server.py         # Task 21: エラーハンドリングラッパー、dry_run=True
 
 SKILL.md                      # Task 22: Claude Code用スキルファイル
 
@@ -2271,7 +2484,7 @@ davinci-cli/
 │   │   └── deliver.py
 │   └── mcp/
 │       ├── __init__.py
-│       └── server.py
+│       └── mcp_server.py
 └── tests/
     ├── __init__.py
     ├── mocks/
