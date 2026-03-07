@@ -29,7 +29,8 @@ def get_edition(resolve: Any) -> str:
     GetVersion() が {"product": "DaVinci Resolve Studio"} を返す場合は Studio、
     それ以外は Free として扱う。
     """
-    version_info: dict[str, Any] = resolve.GetVersion() or {}
+    raw = resolve.GetVersion()
+    version_info: dict[str, Any] = raw if isinstance(raw, dict) else {}
     product: str = version_info.get("product", "")
     if "Studio" in product:
         return EDITION_STUDIO

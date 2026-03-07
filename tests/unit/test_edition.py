@@ -36,6 +36,18 @@ class TestGetEdition:
         mock_resolve.GetVersion.return_value = None
         assert get_edition(mock_resolve) == EDITION_FREE
 
+    def test_get_version_returns_string_treated_as_free(self):
+        """GetVersion() が文字列を返すケースのハンドリング"""
+        mock_resolve = MagicMock()
+        mock_resolve.GetVersion.return_value = "19.0.0"
+        assert get_edition(mock_resolve) == EDITION_FREE
+
+    def test_get_version_returns_list_treated_as_free(self):
+        """GetVersion() がリストを返すケースのハンドリング"""
+        mock_resolve = MagicMock()
+        mock_resolve.GetVersion.return_value = [19, 0, 0]
+        assert get_edition(mock_resolve) == EDITION_FREE
+
     def test_edition_is_string_constant(self):
         assert isinstance(EDITION_FREE, str)
         assert isinstance(EDITION_STUDIO, str)
