@@ -36,6 +36,8 @@ class DavinciCLIGroup(click.Group):
             }
             click.echo(json.dumps(error_response, ensure_ascii=False))
             ctx.exit(exc.exit_code)
+        except click.exceptions.ClickException:
+            raise  # Click の UsageError/BadParameter 等はそのまま伝播
         except Exception as exc:
             error_response = {
                 "error": str(exc),

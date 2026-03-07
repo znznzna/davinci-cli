@@ -1,7 +1,6 @@
 import json
 
 import click
-import pytest
 from click.testing import CliRunner
 
 from davinci_cli.decorators import dry_run_option, fields_option, json_input_option

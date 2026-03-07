@@ -1,12 +1,9 @@
 import json
 
-import pytest
 from click.testing import CliRunner
-from unittest.mock import patch, MagicMock
 
-from davinci_cli.cli import dr, DavinciCLIGroup
+from davinci_cli.cli import dr
 from davinci_cli.core.exceptions import (
-    DavinciCLIError,
     DavinciEnvironmentError,
     EditionError,
     ProjectNotOpenError,
@@ -107,6 +104,11 @@ class TestDavinciCLIGroup:
 
         result = CliRunner().invoke(dr, ["_test_no_tb_err"])
         assert "Traceback" not in result.output
+
+    def test_click_usage_error_not_swallowed(self):
+        """Click の UsageError は JSON エラーではなく通常の Click エラー表示"""
+        result = CliRunner().invoke(dr, ["nosuch_command_xyz"])
+        assert result.exit_code == 2
 
 
 class TestSubcommandRegistration:

@@ -1,13 +1,12 @@
 import json
+from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
-from unittest.mock import MagicMock, patch
 
 from davinci_cli.cli import dr
 from davinci_cli.commands.system import edition_impl, info_impl, ping_impl, version_impl
 from davinci_cli.core.exceptions import ResolveNotRunningError
-
 
 RESOLVE_PATCH = "davinci_cli.commands.system.get_resolve"
 
@@ -32,9 +31,11 @@ class TestPingImpl:
         assert result == {"status": "ok", "version": "20.3.2.9"}
 
     def test_raises_when_not_running(self):
-        with patch(RESOLVE_PATCH, side_effect=ResolveNotRunningError()):
-            with pytest.raises(ResolveNotRunningError):
-                ping_impl()
+        with (
+            patch(RESOLVE_PATCH, side_effect=ResolveNotRunningError()),
+            pytest.raises(ResolveNotRunningError),
+        ):
+            ping_impl()
 
 
 class TestVersionImpl:
