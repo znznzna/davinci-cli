@@ -204,6 +204,12 @@ def timeline_create_impl(
         raise ValidationError(
             field="name", reason=f"Failed to create timeline: {name}"
         )
+    if fps is not None:
+        tl.SetSetting("timelineFrameRate", str(fps))
+    if width is not None:
+        tl.SetSetting("timelineResolutionWidth", str(width))
+    if height is not None:
+        tl.SetSetting("timelineResolutionHeight", str(height))
     return {"created": name}
 
 
@@ -238,7 +244,12 @@ def timeline_export_impl(
     )
     if not tl:
         raise ProjectNotOpenError()
-    tl.Export(output_path, format)
+    result = tl.Export(output_path, format)
+    if result is False:
+        raise ValidationError(
+            field="format",
+            reason=f"Export failed for format '{format}' to '{output_path}'",
+        )
     return {"exported": output_path, "format": format}
 
 

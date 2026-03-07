@@ -186,7 +186,12 @@ def clip_property_set_impl(
             reason=f"Clip index {index} out of range",
         )
     _, clip_item = clips[index]
-    clip_item.SetProperty(key, value)
+    result = clip_item.SetProperty(key, value)
+    if result is False:
+        raise ValidationError(
+            field="key",
+            reason=f"Failed to set property '{key}' to '{value}'",
+        )
     return {"set": True, "index": index, "key": key, "value": value}
 
 
