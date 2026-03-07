@@ -4,10 +4,12 @@
 unit test を実行できるようにするための純粋 Python 実装。
 
 API正確性に関する注意:
-  このモックは DaVinci Resolve 19.x の Python API を参考に作成している。
-  GetVersion() は dict を返す設計としているが、実際の API レスポンスと
-  フィールド名・型が異なる可能性がある。新しいバージョンの DaVinci Resolve で
-  テストする際は、まず実 API の戻り値を確認し、モックを更新すること。
+  DaVinci Resolve 20.3 (Free) 実機確認結果:
+    GetVersion()       → [20, 3, 2, 9, '']   (list)
+    GetVersionString() → "20.3.2.9"           (str)
+
+  Studio 版は5番目の要素が "Studio" になると推定される。
+  本モックはこの実機確認結果に基づく形式を採用している。
 
 使用例:
     from tests.mocks.resolve_mock import MockDaVinciResolveScript
@@ -126,20 +128,12 @@ class MockResolve:
             project_name=project_name,
         )
 
-    def GetVersion(self) -> dict[str, Any]:
-        product = "DaVinci Resolve Studio" if self._studio else "DaVinci Resolve"
-        return {
-            "product": product,
-            "major": 19,
-            "minor": 0,
-            "patch": 0,
-            "build": 0,
-            "suffix": "",
-        }
+    def GetVersion(self) -> list[Any]:
+        suffix = "Studio" if self._studio else ""
+        return [20, 3, 2, 9, suffix]
 
     def GetVersionString(self) -> str:
-        product = "DaVinci Resolve Studio" if self._studio else "DaVinci Resolve"
-        return f"{product} 19.0.0b0"
+        return "20.3.2.9"
 
     def GetProjectManager(self) -> MockProjectManager:
         return self._project_manager

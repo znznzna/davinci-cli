@@ -2,12 +2,12 @@ from tests.mocks.resolve_mock import MockProject, MockProjectManager, MockResolv
 
 
 class TestMockResolve:
-    def test_get_version_returns_dict(self):
+    def test_get_version_returns_list(self):
         resolve = MockResolve()
         version = resolve.GetVersion()
-        assert isinstance(version, dict)
-        assert "product" in version
-        assert "DaVinci Resolve" in version["product"]
+        assert isinstance(version, list)
+        assert len(version) == 5
+        assert version[0] == 20  # major
 
     def test_get_project_manager_returns_mock(self):
         resolve = MockResolve()
@@ -16,11 +16,13 @@ class TestMockResolve:
 
     def test_studio_edition(self):
         resolve = MockResolve(studio=True)
-        assert "Studio" in resolve.GetVersion()["product"]
+        version = resolve.GetVersion()
+        assert "Studio" in version[4]
 
     def test_free_edition(self):
         resolve = MockResolve(studio=False)
-        assert "Studio" not in resolve.GetVersion()["product"]
+        version = resolve.GetVersion()
+        assert version[4] == ""
 
 
 class TestMockProjectManager:

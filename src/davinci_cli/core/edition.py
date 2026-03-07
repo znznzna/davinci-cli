@@ -1,16 +1,19 @@
 """DaVinci Resolve エディション（Free / Studio）判定。
 
 API正確性に関する注意:
-  GetVersion() の返り値はDaVinci Resolveのバージョンによって異なる可能性がある。
-  現在の実装は GetVersion() が {"product": "DaVinci Resolve Studio"} を返すことを
-  前提としている。実際のAPIレスポンスが変更された場合、このモジュールの更新が必要。
+  GetVersion() の返り値はDaVinci Resolveのバージョンによって異なる。
 
-  テスト時は MockResolve で dict を返す設計を採用しているが、
-  実環境での GetVersion() 出力は以下のような形式であることが確認されている:
-    {"product": "DaVinci Resolve Studio", "major": 19, "minor": 0, ...}
+  DaVinci Resolve 20.x (実機確認済み):
+    GetVersion()       → [20, 3, 2, 9, '']   (list, 5番目がエディション情報)
+    GetVersionString() → "20.3.2.9"
 
-  新しいバージョンの DaVinci Resolve で動作確認する際は、
-  まず実際の GetVersion() の戻り値を確認し、必要に応じて判定ロジックを修正すること。
+  過去バージョン (19.x 等) では dict を返す可能性がある:
+    GetVersion()       → {"product": "DaVinci Resolve Studio", ...}
+
+  Studio 判定は以下の優先順位で行う:
+    1. dict の場合: product キーに "Studio" を含むか
+    2. list の場合: 文字列要素に "Studio" を含むか
+    3. GetVersionString() に "Studio" を含むか
 """
 
 from __future__ import annotations
@@ -23,18 +26,37 @@ from davinci_cli.core.exceptions import EditionError
 EDITION_FREE = "Free"
 EDITION_STUDIO = "Studio"
 
+_STUDIO_MARKER = "Studio"
+
 
 def get_edition(resolve: Any) -> str:
     """Resolve オブジェクトからエディションを検出する。
 
-    GetVersion() が {"product": "DaVinci Resolve Studio"} を返す場合は Studio、
-    それ以外は Free として扱う。
+    GetVersion() の戻り値が dict / list いずれの場合も対応し、
+    フォールバックとして GetVersionString() も確認する。
     """
     raw = resolve.GetVersion()
-    version_info: dict[str, Any] = raw if isinstance(raw, dict) else {}
-    product: str = version_info.get("product", "")
-    if "Studio" in product:
-        return EDITION_STUDIO
+
+    # dict 形式 (19.x 等): {"product": "DaVinci Resolve Studio", ...}
+    if isinstance(raw, dict):
+        product: str = raw.get("product", "")
+        if _STUDIO_MARKER in product:
+            return EDITION_STUDIO
+
+    # list 形式 (20.x): [major, minor, patch, build, edition_suffix]
+    if isinstance(raw, list):
+        for item in raw:
+            if isinstance(item, str) and _STUDIO_MARKER in item:
+                return EDITION_STUDIO
+
+    # フォールバック: GetVersionString() を確認
+    try:
+        version_str = resolve.GetVersionString()
+        if isinstance(version_str, str) and _STUDIO_MARKER in version_str:
+            return EDITION_STUDIO
+    except (AttributeError, TypeError):
+        pass
+
     return EDITION_FREE
 
 
