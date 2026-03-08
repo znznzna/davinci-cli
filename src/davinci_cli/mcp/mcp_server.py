@@ -1,9 +1,9 @@
-"""FastMCP サーバー — davinci-cli の全 _impl 関数を MCP tool として公開する。
+"""FastMCP server — exposes all _impl functions as MCP tools.
 
-設計方針:
-  - MCP の tool 関数では dry_run=True がデフォルト（CLI側は False）
-  - 各 tool の description に AGENT RULES を埋め込む
-  - mcp_error_handler で例外をキャッチし、構造化エラーレスポンスを返す
+Design:
+  - MCP tools default dry_run=True (CLI defaults to False)
+  - Each tool description includes metadata tags: [risk_level], [mutating], [supports_dry_run]
+  - mcp_error_handler catches exceptions and returns structured error responses
 """
 from __future__ import annotations
 
@@ -171,8 +171,11 @@ mcp = FastMCP("davinci-cli", instructions=INSTRUCTIONS)
 
 
 @mcp.tool(
-    description="Resolve接続確認を行う。\n"
-    "AGENT RULES:\n- 接続確認のみ。引数不要。"
+    description=(
+        "Check connection to DaVinci Resolve. Returns status and version.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required. Call this first to verify Resolve is running."
+    )
 )
 @mcp_error_handler
 def system_ping() -> dict:
@@ -180,8 +183,11 @@ def system_ping() -> dict:
 
 
 @mcp.tool(
-    description="DaVinci Resolveのバージョン情報を返す。\n"
-    "AGENT RULES:\n- 引数不要。"
+    description=(
+        "Return DaVinci Resolve version string.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required."
+    )
 )
 @mcp_error_handler
 def system_version() -> dict:
@@ -189,8 +195,11 @@ def system_version() -> dict:
 
 
 @mcp.tool(
-    description="DaVinci Resolveのエディション（Free/Studio）を返す。\n"
-    "AGENT RULES:\n- 引数不要。"
+    description=(
+        "Return DaVinci Resolve edition (Free or Studio).\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required."
+    )
 )
 @mcp_error_handler
 def system_edition() -> dict:
@@ -198,8 +207,11 @@ def system_edition() -> dict:
 
 
 @mcp.tool(
-    description="総合情報（バージョン+エディション+現在プロジェクト）を返す。\n"
-    "AGENT RULES:\n- 引数不要。"
+    description=(
+        "Return combined info: version, edition, and current project.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required."
+    )
 )
 @mcp_error_handler
 def system_info() -> dict:
@@ -207,8 +219,11 @@ def system_info() -> dict:
 
 
 @mcp.tool(
-    description="現在のページを取得する。\n"
-    "AGENT RULES:\n- 引数不要。media/edit/fusion/color/fairlight/deliverのいずれかを返す。"
+    description=(
+        "Get the current Resolve UI page.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Returns one of: media, cut, edit, fusion, color, fairlight, deliver."
+    )
 )
 @mcp_error_handler
 def system_page_get() -> dict:
@@ -216,10 +231,12 @@ def system_page_get() -> dict:
 
 
 @mcp.tool(
-    description="ページを切り替える。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- 有効なページ: media, cut, edit, fusion, color, fairlight, deliver"
+    description=(
+        "Switch the Resolve UI page.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: page (str) — media, cut, edit, fusion, color, fairlight, deliver.\n"
+        "IMPORTANT: Always dry_run=True first to preview."
+    )
 )
 @mcp_error_handler
 def system_page_set(page: str, dry_run: bool = True) -> dict:
@@ -227,8 +244,11 @@ def system_page_set(page: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="現在のキーフレームモードを取得する。\n"
-    "AGENT RULES:\n- 引数不要。0=all, 1=color, 2=sizingを返す。"
+    description=(
+        "Get the current keyframe mode.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Returns mode: 0=all, 1=color, 2=sizing."
+    )
 )
 @mcp_error_handler
 def system_keyframe_mode_get() -> dict:
@@ -236,10 +256,12 @@ def system_keyframe_mode_get() -> dict:
 
 
 @mcp.tool(
-    description="キーフレームモードを設定する。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- mode: 0=all, 1=color, 2=sizing"
+    description=(
+        "Set the keyframe mode.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: mode (int) — 0=all, 1=color, 2=sizing.\n"
+        "IMPORTANT: Always dry_run=True first to preview."
+    )
 )
 @mcp_error_handler
 def system_keyframe_mode_set(mode: int, dry_run: bool = True) -> dict:
@@ -250,10 +272,12 @@ def system_keyframe_mode_set(mode: int, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="プロジェクト一覧を返す。\n"
-    "AGENT RULES:\n"
-    '- 必ずfields引数でフィールドを絞ること（例: fields="name"）\n'
-    "- 全フィールド取得はコンテキストウィンドウを消費する"
+    description=(
+        "List all projects in the current database.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: fields (str, optional) — comma-separated field names.\n"
+        "IMPORTANT: Always specify fields (e.g., 'name') to minimize response size."
+    )
 )
 @mcp_error_handler
 def project_list(fields: str | None = None) -> list[dict]:
@@ -262,10 +286,13 @@ def project_list(fields: str | None = None) -> list[dict]:
 
 
 @mcp.tool(
-    description="プロジェクトを開く。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認し、ユーザーに結果を提示してから実行すること\n"
-    "- dry_run=Falseは現在のプロジェクトを閉じる副作用がある"
+    description=(
+        "Open a project by name. Closes the current project as a side effect.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: name (str, required), dry_run (bool, default=True).\n"
+        "IMPORTANT: Call project_list first to verify the project name exists.\n"
+        "Unsaved changes in the current project will be lost."
+    )
 )
 @mcp_error_handler
 def project_open(name: str, dry_run: bool = True) -> dict:
@@ -273,10 +300,12 @@ def project_open(name: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="現在のプロジェクトを閉じる。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- 未保存の変更は失われる"
+    description=(
+        "Close the current project.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: dry_run (bool, default=True).\n"
+        "Unsaved changes will be lost."
+    )
 )
 @mcp_error_handler
 def project_close(dry_run: bool = True) -> dict:
@@ -284,8 +313,11 @@ def project_close(dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="新規プロジェクトを作成する。\n"
-    "AGENT RULES:\n- 必ずdry_run=Trueで事前確認すること"
+    description=(
+        "Create a new project.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: name (str, required), dry_run (bool, default=True)."
+    )
 )
 @mcp_error_handler
 def project_create(name: str, dry_run: bool = True) -> dict:
@@ -293,10 +325,14 @@ def project_create(name: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="プロジェクトを削除する（破壊的操作）。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認し、ユーザーの明示的な承認を得てから実行\n"
-    "- 削除したプロジェクトは復元できない"
+    description=(
+        "Permanently delete a project. This action is irreversible.\n"
+        "[risk_level: destroy] [mutating: true] [supports_dry_run: true]\n"
+        "Params: name (str, required), dry_run (bool, default=True).\n"
+        "IMPORTANT: Always dry_run=True first, present the result to the user,\n"
+        "and obtain explicit approval before executing with dry_run=False.\n"
+        "The Resolve API has no undo — deleted projects cannot be recovered."
+    )
 )
 @mcp_error_handler
 def project_delete(name: str, dry_run: bool = True) -> dict:
@@ -304,8 +340,11 @@ def project_delete(name: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="現在のプロジェクトをリネームする。\n"
-    "AGENT RULES:\n- 必ずdry_run=Trueで事前確認すること"
+    description=(
+        "Rename the current project.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: name (str, required), dry_run (bool, default=True)."
+    )
 )
 @mcp_error_handler
 def project_rename(name: str, dry_run: bool = True) -> dict:
@@ -313,8 +352,11 @@ def project_rename(name: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="プロジェクトを保存する。\n"
-    "AGENT RULES:\n- 引数不要。"
+    description=(
+        "Save the current project.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "No parameters required."
+    )
 )
 @mcp_error_handler
 def project_save() -> dict:
@@ -322,8 +364,12 @@ def project_save() -> dict:
 
 
 @mcp.tool(
-    description="現在のプロジェクト情報を返す。\n"
-    "AGENT RULES:\n- 必ずfields引数でフィールドを絞ること"
+    description=(
+        "Return current project information.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: fields (str, optional) — comma-separated field names.\n"
+        "IMPORTANT: Always specify fields to minimize response size."
+    )
 )
 @mcp_error_handler
 def project_info(fields: str | None = None) -> dict:
@@ -332,8 +378,12 @@ def project_info(fields: str | None = None) -> dict:
 
 
 @mcp.tool(
-    description="プロジェクト設定を取得する。\n"
-    "AGENT RULES:\n- key省略で全設定取得（コンテキストを消費する）"
+    description=(
+        "Get project settings. Returns a specific setting by key or all settings.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: key (str, optional) — setting key. Omit to get all settings.\n"
+        "IMPORTANT: Specify a key when possible to minimize response size."
+    )
 )
 @mcp_error_handler
 def project_settings_get(key: str | None = None) -> dict:
@@ -341,8 +391,12 @@ def project_settings_get(key: str | None = None) -> dict:
 
 
 @mcp.tool(
-    description="プロジェクト設定を変更する。\n"
-    "AGENT RULES:\n- 必ずdry_run=Trueで事前確認すること"
+    description=(
+        "Set a project setting value.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: key (str, required), value (str, required), dry_run (bool, default=True).\n"
+        "IMPORTANT: Call project_settings_get(key) first to check the current value."
+    )
 )
 @mcp_error_handler
 def project_settings_set(key: str, value: str, dry_run: bool = True) -> dict:
@@ -353,8 +407,12 @@ def project_settings_set(key: str, value: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="タイムライン一覧を返す。\n"
-    "AGENT RULES:\n- 必ずfields引数でフィールドを絞ること"
+    description=(
+        "List all timelines in the current project.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: fields (str, optional) — comma-separated field names.\n"
+        "IMPORTANT: Always specify fields (e.g., 'name') to minimize response size."
+    )
 )
 @mcp_error_handler
 def timeline_list(fields: str | None = None) -> list[dict]:
@@ -363,8 +421,12 @@ def timeline_list(fields: str | None = None) -> list[dict]:
 
 
 @mcp.tool(
-    description="現在のタイムライン情報を返す。\n"
-    "AGENT RULES:\n- 必ずfields引数でフィールドを絞ること"
+    description=(
+        "Return current timeline information.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: fields (str, optional) — comma-separated field names.\n"
+        "IMPORTANT: Always specify fields to minimize response size."
+    )
 )
 @mcp_error_handler
 def timeline_current(fields: str | None = None) -> dict:
@@ -373,8 +435,13 @@ def timeline_current(fields: str | None = None) -> dict:
 
 
 @mcp.tool(
-    description="タイムラインを切り替える。\n"
-    "AGENT RULES:\n- 必ずdry_run=Trueで事前確認すること"
+    description=(
+        "Switch to a different timeline by name.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: name (str, required), dry_run (bool, default=True).\n"
+        "IMPORTANT: After switching, all previously obtained clip_index values become invalid.\n"
+        "Always re-fetch clip_list after switching timelines."
+    )
 )
 @mcp_error_handler
 def timeline_switch(name: str, dry_run: bool = True) -> dict:
@@ -382,8 +449,11 @@ def timeline_switch(name: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="新規タイムラインを作成する。\n"
-    "AGENT RULES:\n- 必ずdry_run=Trueで事前確認すること"
+    description=(
+        "Create a new empty timeline.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: name (str, required), dry_run (bool, default=True)."
+    )
 )
 @mcp_error_handler
 def timeline_create(name: str, dry_run: bool = True) -> dict:
@@ -391,8 +461,12 @@ def timeline_create(name: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="タイムラインを削除する（破壊的操作）。\n"
-    "AGENT RULES:\n- 必ずdry_run=Trueで事前確認すること"
+    description=(
+        "Delete a timeline. This action is irreversible.\n"
+        "[risk_level: destroy] [mutating: true] [supports_dry_run: true]\n"
+        "Params: name (str, required), dry_run (bool, default=True).\n"
+        "IMPORTANT: Always dry_run=True first and obtain user approval."
+    )
 )
 @mcp_error_handler
 def timeline_delete(name: str, dry_run: bool = True) -> dict:
@@ -400,8 +474,11 @@ def timeline_delete(name: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="現在のタイムコードを取得する。\n"
-    "AGENT RULES:\n- 引数不要。"
+    description=(
+        "Get the current playhead timecode.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required. Returns timecode in HH:MM:SS:FF format."
+    )
 )
 @mcp_error_handler
 def timeline_timecode_get() -> dict:
@@ -409,10 +486,12 @@ def timeline_timecode_get() -> dict:
 
 
 @mcp.tool(
-    description="タイムコードを設定する。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    '- timecodeはHH:MM:SS:FF形式（例: "01:00:00:00"）'
+    description=(
+        "Set the playhead timecode position.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: timecode (str, HH:MM:SS:FF, e.g., '01:00:00:00'),\n"
+        "dry_run (bool, default=True)."
+    )
 )
 @mcp_error_handler
 def timeline_timecode_set(timecode: str, dry_run: bool = True) -> dict:
@@ -420,8 +499,11 @@ def timeline_timecode_set(timecode: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="現在のビデオアイテム（再生ヘッド位置のクリップ）を取得する。\n"
-    "AGENT RULES:\n- 引数不要。"
+    description=(
+        "Get the clip at the current playhead position.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required."
+    )
 )
 @mcp_error_handler
 def timeline_current_item() -> dict:
@@ -429,8 +511,11 @@ def timeline_current_item() -> dict:
 
 
 @mcp.tool(
-    description="全トラック一覧を返す。\n"
-    "AGENT RULES:\n- 引数不要。video/audio/subtitleトラックを全て返す。"
+    description=(
+        "List all tracks (video, audio, subtitle) in the current timeline.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required."
+    )
 )
 @mcp_error_handler
 def timeline_track_list() -> list[dict]:
@@ -438,10 +523,11 @@ def timeline_track_list() -> list[dict]:
 
 
 @mcp.tool(
-    description="トラックを追加する。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- track_type: video, audio, subtitle"
+    description=(
+        "Add a new track to the current timeline.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: track_type (str) — video, audio, or subtitle."
+    )
 )
 @mcp_error_handler
 def timeline_track_add(track_type: str, dry_run: bool = True) -> dict:
@@ -449,11 +535,12 @@ def timeline_track_add(track_type: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="トラックを削除する（破壊的操作）。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- track_type: video, audio, subtitle\n"
-    "- track_indexはtrack_listで確認した値を使うこと"
+    description=(
+        "Delete a track from the current timeline.\n"
+        "[risk_level: destroy] [mutating: true] [supports_dry_run: true]\n"
+        "Params: track_type (str) — video, audio, subtitle; track_index (int).\n"
+        "IMPORTANT: Get track_index from timeline_track_list first."
+    )
 )
 @mcp_error_handler
 def timeline_track_delete(
@@ -465,10 +552,13 @@ def timeline_track_delete(
 
 
 @mcp.tool(
-    description="トラックの有効/無効を取得または設定する。\n"
-    "AGENT RULES:\n"
-    "- enabled=Noneで現在値を取得、True/Falseで設定\n"
-    "- track_type: video, audio, subtitle"
+    description=(
+        "Get or set track enabled state.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "Params: track_type (str) — video, audio, subtitle;\n"
+        "track_index (int); enabled (bool|None).\n"
+        "Set enabled=None to get current state, True/False to set."
+    )
 )
 @mcp_error_handler
 def timeline_track_enable(
@@ -480,10 +570,13 @@ def timeline_track_enable(
 
 
 @mcp.tool(
-    description="トラックのロック状態を取得または設定する。\n"
-    "AGENT RULES:\n"
-    "- locked=Noneで現在値を取得、True/Falseで設定\n"
-    "- track_type: video, audio, subtitle"
+    description=(
+        "Get or set track lock state.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "Params: track_type (str) — video, audio, subtitle;\n"
+        "track_index (int); locked (bool|None).\n"
+        "Set locked=None to get current state, True/False to set."
+    )
 )
 @mcp_error_handler
 def timeline_track_lock(
@@ -495,10 +588,11 @@ def timeline_track_lock(
 
 
 @mcp.tool(
-    description="現在のタイムラインを複製する。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- nameを省略すると自動命名される"
+    description=(
+        "Duplicate the current timeline.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: name (str, optional — auto-named if omitted), dry_run (bool, default=True)."
+    )
 )
 @mcp_error_handler
 def timeline_duplicate(name: str | None = None, dry_run: bool = True) -> dict:
@@ -506,8 +600,12 @@ def timeline_duplicate(name: str | None = None, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="タイムラインのシーンカットを検出する。\n"
-    "AGENT RULES:\n- 処理に時間がかかる場合がある。"
+    description=(
+        "Detect scene cuts in the current timeline.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required.\n"
+        "WARNING: This operation can take significant time on long timelines."
+    )
 )
 @mcp_error_handler
 def timeline_detect_scene_cuts() -> dict:
@@ -515,8 +613,12 @@ def timeline_detect_scene_cuts() -> dict:
 
 
 @mcp.tool(
-    description="音声から字幕を自動生成する。\n"
-    "AGENT RULES:\n- 処理に時間がかかる場合がある。"
+    description=(
+        "Auto-generate subtitles from audio in the current timeline.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "No parameters required.\n"
+        "WARNING: This operation can take significant time."
+    )
 )
 @mcp_error_handler
 def timeline_create_subtitles() -> dict:
@@ -524,11 +626,13 @@ def timeline_create_subtitles() -> dict:
 
 
 @mcp.tool(
-    description="タイムラインをファイルにエクスポートする。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- format: AAF, EDL, FCPXML 等\n"
-    '- output_pathはシステム上の絶対パス（".."を含むパスは拒絶される）'
+    description=(
+        "Export a timeline to a file.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: format (str — AAF, EDL, FCPXML, etc.), output_path (str, absolute path),\n"
+        "timeline_name (str, optional — current if omitted), dry_run (bool, default=True).\n"
+        "Path traversal ('..') is rejected for security."
+    )
 )
 @mcp_error_handler
 def timeline_export(
@@ -546,8 +650,11 @@ def timeline_export(
 
 
 @mcp.tool(
-    description="タイムラインのマーカー一覧を返す。\n"
-    "AGENT RULES:\n- timeline_name省略で現在のタイムラインを使用"
+    description=(
+        "List all markers in a timeline.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: timeline_name (str, optional — current timeline if omitted)."
+    )
 )
 @mcp_error_handler
 def timeline_marker_list(timeline_name: str | None = None) -> list[dict]:
@@ -555,10 +662,14 @@ def timeline_marker_list(timeline_name: str | None = None) -> list[dict]:
 
 
 @mcp.tool(
-    description="タイムラインにマーカーを追加する。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- color: Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, Sky, Mint, Lemon, Sand, Cocoa, Cream"
+    description=(
+        "Add a marker to the current timeline.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: frame_id (int), color (str), name (str),\n"
+        "note (str, optional), duration (int, default=1).\n"
+        "Colors: Blue, Cyan, Green, Yellow, Red, Pink, Purple,\n"
+        "Fuchsia, Rose, Lavender, Sky, Mint, Lemon, Sand, Cocoa, Cream."
+    )
 )
 @mcp_error_handler
 def timeline_marker_add(
@@ -580,10 +691,12 @@ def timeline_marker_add(
 
 
 @mcp.tool(
-    description="タイムラインのマーカーを削除する。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- frame_idはtimeline_marker_listで確認した値を使うこと"
+    description=(
+        "Delete a marker from the current timeline.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: frame_id (int), dry_run (bool, default=True).\n"
+        "IMPORTANT: Get frame_id from timeline_marker_list first."
+    )
 )
 @mcp_error_handler
 def timeline_marker_delete(frame_id: int, dry_run: bool = True) -> dict:
@@ -594,9 +707,13 @@ def timeline_marker_delete(frame_id: int, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="クリップ一覧を返す。\n"
-    "AGENT RULES:\n"
-    '- 必ずfields引数でフィールドを絞ること（例: fields="index,name"）'
+    description=(
+        "List all clips in the current timeline.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: fields (str, optional) — comma-separated field names.\n"
+        "IMPORTANT: Always specify fields (e.g., 'index,name') to minimize response size.\n"
+        "clip_index values are timeline-dependent — they change when switching timelines."
+    )
 )
 @mcp_error_handler
 def clip_list(fields: str | None = None) -> list[dict]:
@@ -605,8 +722,12 @@ def clip_list(fields: str | None = None) -> list[dict]:
 
 
 @mcp.tool(
-    description="クリップ詳細を返す。\n"
-    "AGENT RULES:\n- index はclip listで確認した値を使うこと"
+    description=(
+        "Return detailed information about a clip.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: index (int) — clip index from clip_list.\n"
+        "IMPORTANT: Get index from clip_list first."
+    )
 )
 @mcp_error_handler
 def clip_info(index: int) -> dict:
@@ -614,8 +735,12 @@ def clip_info(index: int) -> dict:
 
 
 @mcp.tool(
-    description="クリップを選択する。\n"
-    "AGENT RULES:\n- index はclip listで確認した値を使うこと"
+    description=(
+        "Select a clip in the current timeline.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "Params: index (int) — clip index from clip_list.\n"
+        "IMPORTANT: Get index from clip_list first."
+    )
 )
 @mcp_error_handler
 def clip_select(index: int) -> dict:
@@ -623,8 +748,12 @@ def clip_select(index: int) -> dict:
 
 
 @mcp.tool(
-    description="クリップのプロパティを取得する。\n"
-    "AGENT RULES:\n- index はclip listで確認した値を使うこと"
+    description=(
+        "Get a property value of a clip.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: index (int) — clip index from clip_list; key (str) — property name.\n"
+        "IMPORTANT: Get index from clip_list first."
+    )
 )
 @mcp_error_handler
 def clip_property_get(index: int, key: str) -> dict:
@@ -632,8 +761,12 @@ def clip_property_get(index: int, key: str) -> dict:
 
 
 @mcp.tool(
-    description="クリップのプロパティを設定する。\n"
-    "AGENT RULES:\n- 必ずdry_run=Trueで事前確認すること"
+    description=(
+        "Set a property value on a clip.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: index (int), key (str), value (str), dry_run (bool, default=True).\n"
+        "IMPORTANT: Get index from clip_list first."
+    )
 )
 @mcp_error_handler
 def clip_property_set(
@@ -645,10 +778,13 @@ def clip_property_set(
 
 
 @mcp.tool(
-    description="クリップの有効/無効を取得または設定する。\n"
-    "AGENT RULES:\n"
-    "- enabled=Noneで現在値を取得、True/Falseで設定\n"
-    "- index はclip listで確認した値を使うこと"
+    description=(
+        "Get or set clip enabled state.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "Params: index (int), enabled (bool|None).\n"
+        "Set enabled=None to get current state, True/False to set.\n"
+        "IMPORTANT: Get index from clip_list first."
+    )
 )
 @mcp_error_handler
 def clip_enable(index: int, enabled: bool | None = None) -> dict:
@@ -656,8 +792,11 @@ def clip_enable(index: int, enabled: bool | None = None) -> dict:
 
 
 @mcp.tool(
-    description="クリップのカラーを取得する。\n"
-    "AGENT RULES:\n- index はclip listで確認した値を使うこと"
+    description=(
+        "Get the color label of a clip.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: index (int) — clip index from clip_list."
+    )
 )
 @mcp_error_handler
 def clip_color_get(index: int) -> dict:
@@ -665,11 +804,13 @@ def clip_color_get(index: int) -> dict:
 
 
 @mcp.tool(
-    description="クリップのカラーを設定する。\n"
-    "AGENT RULES:\n"
-    "- index はclip listで確認した値を使うこと\n"
-    "- color: Orange, Apricot, Yellow, Lime, Olive, Green, Teal, Navy,\n"
-    "  Blue, Purple, Violet, Pink, Tan, Beige, Brown, Chocolate"
+    description=(
+        "Set the color label of a clip.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "Params: index (int), color (str).\n"
+        "Colors: Orange, Apricot, Yellow, Lime, Olive, Green, Teal, Navy,\n"
+        "Blue, Purple, Violet, Pink, Tan, Beige, Brown, Chocolate."
+    )
 )
 @mcp_error_handler
 def clip_color_set(index: int, color: str) -> dict:
@@ -677,8 +818,11 @@ def clip_color_set(index: int, color: str) -> dict:
 
 
 @mcp.tool(
-    description="クリップのカラーをクリアする。\n"
-    "AGENT RULES:\n- index はclip listで確認した値を使うこと"
+    description=(
+        "Clear the color label of a clip.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "Params: index (int) — clip index from clip_list."
+    )
 )
 @mcp_error_handler
 def clip_color_clear(index: int) -> dict:
@@ -686,8 +830,11 @@ def clip_color_clear(index: int) -> dict:
 
 
 @mcp.tool(
-    description="クリップにフラグを追加する。\n"
-    "AGENT RULES:\n- index はclip listで確認した値を使うこと"
+    description=(
+        "Add a flag to a clip.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "Params: index (int), color (str) — flag color."
+    )
 )
 @mcp_error_handler
 def clip_flag_add(index: int, color: str) -> dict:
@@ -695,8 +842,11 @@ def clip_flag_add(index: int, color: str) -> dict:
 
 
 @mcp.tool(
-    description="クリップのフラグ一覧を返す。\n"
-    "AGENT RULES:\n- index はclip listで確認した値を使うこと"
+    description=(
+        "List all flags on a clip.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: index (int) — clip index from clip_list."
+    )
 )
 @mcp_error_handler
 def clip_flag_list(index: int) -> list:
@@ -704,10 +854,11 @@ def clip_flag_list(index: int) -> list:
 
 
 @mcp.tool(
-    description="クリップのフラグをクリアする。\n"
-    "AGENT RULES:\n"
-    "- index はclip listで確認した値を使うこと\n"
-    '- color: 特定色またはデフォルト"All"で全クリア'
+    description=(
+        "Clear flags from a clip.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "Params: index (int), color (str, default='All') — specific color or 'All' to clear all."
+    )
 )
 @mcp_error_handler
 def clip_flag_clear(index: int, color: str = "All") -> dict:
@@ -718,11 +869,14 @@ def clip_flag_clear(index: int, color: str = "All") -> dict:
 
 
 @mcp.tool(
-    description="クリップにLUTを適用する。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    '- lut_pathはシステム上の絶対パス（".."を含むパスは拒絶される）\n'
-    "- 許可拡張子: .cube, .3dl, .lut, .mga, .m3d"
+    description=(
+        "Apply a LUT file to a clip's color grade.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_index (int), lut_path (str, absolute path), dry_run (bool, default=True).\n"
+        "Allowed extensions: .cube, .3dl, .lut, .mga, .m3d.\n"
+        "Path traversal ('..') is rejected for security.\n"
+        "IMPORTANT: Get clip_index from clip_list first. Node index is 1-based."
+    )
 )
 @mcp_error_handler
 def color_apply_lut(
@@ -734,8 +888,12 @@ def color_apply_lut(
 
 
 @mcp.tool(
-    description="グレードをリセットする。\n"
-    "AGENT RULES:\n- 必ずdry_run=Trueで事前確認すること"
+    description=(
+        "Reset the color grade on a clip.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_index (int), dry_run (bool, default=True).\n"
+        "IMPORTANT: No undo — consider creating a color version checkpoint first."
+    )
 )
 @mcp_error_handler
 def color_reset(clip_index: int, dry_run: bool = True) -> dict:
@@ -743,11 +901,12 @@ def color_reset(clip_index: int, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="グレードを別クリップにコピーする。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- from_index: コピー元クリップインデックス\n"
-    "- to_index: コピー先クリップインデックス"
+    description=(
+        "Copy a color grade from one clip to another.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: from_index (int), to_index (int), dry_run (bool, default=True).\n"
+        "This is a direct copy — there is no separate paste step."
+    )
 )
 @mcp_error_handler
 def color_copy_grade(
@@ -759,8 +918,12 @@ def color_copy_grade(
 
 
 @mcp.tool(
-    description="カラーバージョン一覧を返す。\n"
-    "AGENT RULES:\n- version_type: 0=local, 1=remote"
+    description=(
+        "List color grading versions for a clip.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: clip_index (int), version_type (int, 0=local, 1=remote, default=0).\n"
+        "Get clip_index from clip_list first."
+    )
 )
 @mcp_error_handler
 def color_version_list(clip_index: int, version_type: int = 0) -> list[dict]:
@@ -770,8 +933,12 @@ def color_version_list(clip_index: int, version_type: int = 0) -> list[dict]:
 
 
 @mcp.tool(
-    description="現在のカラーバージョンを取得する。\n"
-    "AGENT RULES:\n- clip_indexはclip listで確認した値を使うこと"
+    description=(
+        "Get the current color version name for a clip.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: clip_index (int).\n"
+        "Get clip_index from clip_list first."
+    )
 )
 @mcp_error_handler
 def color_version_current(clip_index: int) -> dict:
@@ -779,10 +946,13 @@ def color_version_current(clip_index: int) -> dict:
 
 
 @mcp.tool(
-    description="カラーバージョンを追加する。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- version_type: 0=local, 1=remote"
+    description=(
+        "Add a new color version to a clip.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_index (int), name (str), version_type (int, 0=local, 1=remote, default=0),\n"
+        "dry_run (bool, default=True).\n"
+        "Use this to create checkpoints before destructive color operations."
+    )
 )
 @mcp_error_handler
 def color_version_add(
@@ -800,10 +970,12 @@ def color_version_add(
 
 
 @mcp.tool(
-    description="カラーバージョンをロードする。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- version_type: 0=local, 1=remote"
+    description=(
+        "Load a color version by name.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_index (int), name (str), version_type (int, 0=local, 1=remote, default=0),\n"
+        "dry_run (bool, default=True)."
+    )
 )
 @mcp_error_handler
 def color_version_load(
@@ -821,10 +993,13 @@ def color_version_load(
 
 
 @mcp.tool(
-    description="カラーバージョンを削除する（破壊的操作）。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- version_type: 0=local, 1=remote"
+    description=(
+        "Delete a color version. This action is irreversible.\n"
+        "[risk_level: destroy] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_index (int), name (str), version_type (int, 0=local, 1=remote, default=0),\n"
+        "dry_run (bool, default=True).\n"
+        "IMPORTANT: Always dry_run=True first and obtain user approval."
+    )
 )
 @mcp_error_handler
 def color_version_delete(
@@ -842,10 +1017,12 @@ def color_version_delete(
 
 
 @mcp.tool(
-    description="カラーバージョンをリネームする。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- version_type: 0=local, 1=remote"
+    description=(
+        "Rename a color version.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_index (int), old_name (str), new_name (str),\n"
+        "version_type (int, 0=local, 1=remote, default=0), dry_run (bool, default=True)."
+    )
 )
 @mcp_error_handler
 def color_version_rename(
@@ -865,11 +1042,15 @@ def color_version_rename(
 
 
 @mcp.tool(
-    description="ノードにLUTを設定する。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    '- lut_pathはシステム上の絶対パス（".."を含むパスは拒絶される）\n'
-    "- 許可拡張子: .cube, .3dl, .lut, .mga, .m3d"
+    description=(
+        "Set a LUT on a specific node.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_index (int), node_index (int, 1-based), lut_path (str, absolute path),\n"
+        "dry_run (bool, default=True).\n"
+        "Allowed extensions: .cube, .3dl, .lut, .mga, .m3d.\n"
+        "Path traversal ('..') is rejected for security.\n"
+        "IMPORTANT: node_index is 1-based (first node = 1)."
+    )
 )
 @mcp_error_handler
 def color_node_lut_set(
@@ -884,8 +1065,12 @@ def color_node_lut_set(
 
 
 @mcp.tool(
-    description="ノードのLUTパスを取得する。\n"
-    "AGENT RULES:\n- clip_index, node_indexはそれぞれclip list, node listで確認した値を使うこと"
+    description=(
+        "Get the LUT path set on a specific node.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: clip_index (int), node_index (int, 1-based).\n"
+        "IMPORTANT: node_index is 1-based (first node = 1)."
+    )
 )
 @mcp_error_handler
 def color_node_lut_get(clip_index: int, node_index: int) -> dict:
@@ -893,8 +1078,13 @@ def color_node_lut_get(clip_index: int, node_index: int) -> dict:
 
 
 @mcp.tool(
-    description="ノードの有効/無効を設定する。\n"
-    "AGENT RULES:\n- 必ずdry_run=Trueで事前確認すること"
+    description=(
+        "Set a node's enabled/disabled state.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_index (int), node_index (int, 1-based), enabled (bool),\n"
+        "dry_run (bool, default=True).\n"
+        "IMPORTANT: node_index is 1-based (first node = 1)."
+    )
 )
 @mcp_error_handler
 def color_node_enable(
@@ -909,10 +1099,14 @@ def color_node_enable(
 
 
 @mcp.tool(
-    description="CDL値を設定する。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    '- slope/offset/power/saturationはスペース区切りのRGB値（例: "1.0 1.0 1.0"）'
+    description=(
+        "Set CDL (Color Decision List) values on a node.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_index (int), node_index (int, 1-based),\n"
+        "slope (str, RGB space-separated, e.g., '1.0 1.0 1.0'),\n"
+        "offset (str, RGB), power (str, RGB), saturation (str, RGB),\n"
+        "dry_run (bool, default=True)."
+    )
 )
 @mcp_error_handler
 def color_cdl_set(
@@ -936,10 +1130,13 @@ def color_cdl_set(
 
 
 @mcp.tool(
-    description="LUTをファイルにエクスポートする。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    '- pathはシステム上の絶対パス（".."を含むパスは拒絶される）'
+    description=(
+        "Export a LUT from a clip's grade to a file.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_index (int), export_type (int), path (str, absolute path),\n"
+        "dry_run (bool, default=True).\n"
+        "Path traversal ('..') is rejected for security."
+    )
 )
 @mcp_error_handler
 def color_lut_export(
@@ -954,10 +1151,13 @@ def color_lut_export(
 
 
 @mcp.tool(
-    description="全グレードをリセットする（破壊的操作）。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- color_resetとは異なり、ノードグラフ全体をリセットする"
+    description=(
+        "Reset the entire node graph on a clip. More destructive than color_reset.\n"
+        "[risk_level: destroy] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_index (int), dry_run (bool, default=True).\n"
+        "IMPORTANT: This resets the full node graph, not just individual node values.\n"
+        "No undo — consider creating a color version checkpoint first."
+    )
 )
 @mcp_error_handler
 def color_reset_all(clip_index: int, dry_run: bool = True) -> dict:
@@ -965,8 +1165,11 @@ def color_reset_all(clip_index: int, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="スチルをグラブ（キャプチャ）する。\n"
-    "AGENT RULES:\n- 必ずdry_run=Trueで事前確認すること"
+    description=(
+        "Grab (capture) a still from a clip into the current gallery album.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_index (int), dry_run (bool, default=True)."
+    )
 )
 @mcp_error_handler
 def color_still_grab(clip_index: int, dry_run: bool = True) -> dict:
@@ -974,8 +1177,11 @@ def color_still_grab(clip_index: int, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="現在のアルバムのスチル一覧を返す。\n"
-    "AGENT RULES:\n- 引数不要。"
+    description=(
+        "List stills in the current gallery album.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required."
+    )
 )
 @mcp_error_handler
 def color_still_list() -> list[dict]:
@@ -986,10 +1192,12 @@ def color_still_list() -> list[dict]:
 
 
 @mcp.tool(
-    description="メディアプールのクリップ一覧を返す。\n"
-    "AGENT RULES:\n"
-    '- 必ずfields引数でフィールドを絞ること（例: fields="clip_name,file_path"）\n'
-    "- folder引数でフォルダを絞り込むこと"
+    description=(
+        "List clips in the media pool.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: folder (str, optional), fields (str, optional) — comma-separated.\n"
+        "IMPORTANT: Always specify fields (e.g., 'clip_name,file_path') to minimize response size."
+    )
 )
 @mcp_error_handler
 def media_list(
@@ -1000,10 +1208,12 @@ def media_list(
 
 
 @mcp.tool(
-    description="メディアをインポートする。\n"
-    "AGENT RULES:\n"
-    "- pathsには絶対パスのリストを渡すこと\n"
-    '- ".."を含むパスはセキュリティ上の理由で拒絶される'
+    description=(
+        "Import media files into the media pool.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "Params: paths (list[str]) — absolute file paths.\n"
+        "Path traversal ('..') is rejected for security."
+    )
 )
 @mcp_error_handler
 def media_import(paths: list[str]) -> dict:
@@ -1011,10 +1221,12 @@ def media_import(paths: list[str]) -> dict:
 
 
 @mcp.tool(
-    description="メディアクリップを別フォルダに移動する。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- clip_namesはmedia listで確認したクリップ名のリスト"
+    description=(
+        "Move media clips to a different folder in the media pool.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_names (list[str]), target_folder (str), dry_run (bool, default=True).\n"
+        "IMPORTANT: Get clip_names from media_list first."
+    )
 )
 @mcp_error_handler
 def media_move(
@@ -1026,10 +1238,13 @@ def media_move(
 
 
 @mcp.tool(
-    description="メディアクリップを削除する（破壊的操作）。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認し、ユーザーの明示的な承認を得てから実行\n"
-    "- clip_namesはmedia listで確認したクリップ名のリスト"
+    description=(
+        "Delete media clips from the media pool. This action is irreversible.\n"
+        "[risk_level: destroy] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_names (list[str]), dry_run (bool, default=True).\n"
+        "IMPORTANT: Always dry_run=True first, present result, obtain user approval.\n"
+        "Get clip_names from media_list first."
+    )
 )
 @mcp_error_handler
 def media_delete(clip_names: list[str], dry_run: bool = True) -> dict:
@@ -1037,10 +1252,13 @@ def media_delete(clip_names: list[str], dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="メディアクリップを再リンクする。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    '- folder_pathはシステム上の絶対パス（".."を含むパスは拒絶される）'
+    description=(
+        "Relink media clips to a new folder path.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_names (list[str]), folder_path (str, absolute),\n"
+        "dry_run (bool, default=True).\n"
+        "Path traversal ('..') is rejected for security."
+    )
 )
 @mcp_error_handler
 def media_relink(
@@ -1052,8 +1270,12 @@ def media_relink(
 
 
 @mcp.tool(
-    description="メディアクリップのリンクを解除する。\n"
-    "AGENT RULES:\n- clip_namesはmedia listで確認したクリップ名のリスト"
+    description=(
+        "Unlink media clips from their source files.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "Params: clip_names (list[str]).\n"
+        "Get clip_names from media_list first."
+    )
 )
 @mcp_error_handler
 def media_unlink(clip_names: list[str]) -> dict:
@@ -1061,10 +1283,12 @@ def media_unlink(clip_names: list[str]) -> dict:
 
 
 @mcp.tool(
-    description="メディアクリップのメタデータを取得する。\n"
-    "AGENT RULES:\n"
-    "- clip_nameはmedia listで確認したクリップ名\n"
-    "- key省略で全メタデータ取得（コンテキストを消費する）"
+    description=(
+        "Get metadata for a media clip.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: clip_name (str), key (str, optional — omit for all metadata).\n"
+        "IMPORTANT: Specify a key when possible to minimize response size."
+    )
 )
 @mcp_error_handler
 def media_metadata_get(clip_name: str, key: str | None = None) -> dict:
@@ -1072,8 +1296,11 @@ def media_metadata_get(clip_name: str, key: str | None = None) -> dict:
 
 
 @mcp.tool(
-    description="メディアクリップのメタデータを設定する。\n"
-    "AGENT RULES:\n- 必ずdry_run=Trueで事前確認すること"
+    description=(
+        "Set a metadata value on a media clip.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: clip_name (str), key (str), value (str), dry_run (bool, default=True)."
+    )
 )
 @mcp_error_handler
 def media_metadata_set(
@@ -1085,10 +1312,12 @@ def media_metadata_set(
 
 
 @mcp.tool(
-    description="メディアプールのメタデータをCSVにエクスポートする。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    '- file_nameはシステム上の絶対パス（".."を含むパスは拒絶される）'
+    description=(
+        "Export media pool metadata to a CSV file.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: file_name (str, absolute path), dry_run (bool, default=True).\n"
+        "Path traversal ('..') is rejected for security."
+    )
 )
 @mcp_error_handler
 def media_export_metadata(file_name: str, dry_run: bool = True) -> dict:
@@ -1096,10 +1325,12 @@ def media_export_metadata(file_name: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="メディアクリップの音声をトランスクライブする。\n"
-    "AGENT RULES:\n"
-    "- clip_nameはmedia listで確認したクリップ名\n"
-    "- 処理に時間がかかる場合がある"
+    description=(
+        "Transcribe audio from a media clip.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "Params: clip_name (str).\n"
+        "WARNING: This operation can take significant time."
+    )
 )
 @mcp_error_handler
 def media_transcribe(clip_name: str) -> dict:
@@ -1107,8 +1338,11 @@ def media_transcribe(clip_name: str) -> dict:
 
 
 @mcp.tool(
-    description="メディアプールのフォルダ一覧を返す。\n"
-    "AGENT RULES:\n- 引数不要。ルートフォルダ直下のサブフォルダを返す。"
+    description=(
+        "List folders in the media pool (root level).\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required. Returns sub-folders of the root folder."
+    )
 )
 @mcp_error_handler
 def media_folder_list() -> list[dict]:
@@ -1116,8 +1350,11 @@ def media_folder_list() -> list[dict]:
 
 
 @mcp.tool(
-    description="メディアプールにフォルダを作成する。\n"
-    "AGENT RULES:\n- nameはフォルダ名"
+    description=(
+        "Create a new folder in the media pool.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "Params: name (str) — folder name."
+    )
 )
 @mcp_error_handler
 def media_folder_create(name: str) -> dict:
@@ -1125,10 +1362,13 @@ def media_folder_create(name: str) -> dict:
 
 
 @mcp.tool(
-    description="メディアプールのフォルダを削除する（破壊的操作）。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認し、ユーザーの明示的な承認を得てから実行\n"
-    "- フォルダ内のクリップも全て削除される"
+    description=(
+        "Delete a folder from the media pool. This action is irreversible.\n"
+        "[risk_level: destroy] [mutating: true] [supports_dry_run: true]\n"
+        "Params: name (str), dry_run (bool, default=True).\n"
+        "IMPORTANT: Always dry_run=True first and obtain user approval.\n"
+        "All clips inside the folder will also be deleted."
+    )
 )
 @mcp_error_handler
 def media_folder_delete(name: str, dry_run: bool = True) -> dict:
@@ -1139,8 +1379,11 @@ def media_folder_delete(name: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="レンダープリセット一覧を返す。\n"
-    "AGENT RULES:\n- 引数不要。"
+    description=(
+        "List available render presets.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required."
+    )
 )
 @mcp_error_handler
 def deliver_preset_list() -> list[dict]:
@@ -1148,8 +1391,12 @@ def deliver_preset_list() -> list[dict]:
 
 
 @mcp.tool(
-    description="レンダープリセットを読み込む。\n"
-    "AGENT RULES:\n- preset listで確認した名前を使うこと"
+    description=(
+        "Load a render preset by name.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "Params: name (str) — preset name from deliver_preset_list.\n"
+        "IMPORTANT: Call deliver_preset_list first to verify the name."
+    )
 )
 @mcp_error_handler
 def deliver_preset_load(name: str) -> dict:
@@ -1157,10 +1404,11 @@ def deliver_preset_load(name: str) -> dict:
 
 
 @mcp.tool(
-    description="レンダージョブを追加する。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    '- job_dataはdict: {"output_dir": "...", "filename": "..."}'
+    description=(
+        "Add a render job to the queue.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: job_data (dict — keys: output_dir, filename, etc.), dry_run (bool, default=True)."
+    )
 )
 @mcp_error_handler
 def deliver_add_job(job_data: dict, dry_run: bool = True) -> dict:
@@ -1168,9 +1416,12 @@ def deliver_add_job(job_data: dict, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="レンダーキューのジョブ一覧を返す。\n"
-    "AGENT RULES:\n"
-    '- 必ずfields引数でフィールドを絞ること（例: fields="job_id,status"）'
+    description=(
+        "List render jobs in the queue.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: fields (str, optional) — comma-separated field names.\n"
+        "IMPORTANT: Always specify fields (e.g., 'job_id,status') to minimize response size."
+    )
 )
 @mcp_error_handler
 def deliver_list_jobs(fields: str | None = None) -> list[dict]:
@@ -1179,11 +1430,14 @@ def deliver_list_jobs(fields: str | None = None) -> list[dict]:
 
 
 @mcp.tool(
-    description="レンダーを開始する。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- ユーザーに確認結果を提示し、明示的な承認を得てからdry_run=Falseで実行\n"
-    "- この操作はDaVinci Resolveのエンコードリソースを大量消費する"
+    description=(
+        "Start rendering jobs in the deliver queue.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: job_ids (list[str], optional — None renders all), dry_run (bool, default=True).\n"
+        "IMPORTANT: Always dry_run=True first. Rendering consumes significant CPU/GPU resources.\n"
+        "Present the dry-run result to the user and obtain explicit approval.\n"
+        "Monitor progress with deliver_status (poll interval >= 5s)."
+    )
 )
 @mcp_error_handler
 def deliver_start(
@@ -1193,10 +1447,11 @@ def deliver_start(
 
 
 @mcp.tool(
-    description="レンダーを停止する。\n"
-    "AGENT RULES:\n"
-    "- 実行中のレンダーを即座に停止する\n"
-    "- 途中のファイルは不完全な状態で残る"
+    description=(
+        "Stop all rendering immediately.\n"
+        "[risk_level: write] [mutating: true]\n"
+        "No parameters required. Partially rendered files may be incomplete."
+    )
 )
 @mcp_error_handler
 def deliver_stop() -> dict:
@@ -1204,8 +1459,11 @@ def deliver_stop() -> dict:
 
 
 @mcp.tool(
-    description="レンダー進捗を返す（percent, status, eta）。\n"
-    "AGENT RULES:\n- 引数不要。ポーリング間隔は最低5秒空けること。"
+    description=(
+        "Get overall render progress (percent, status, ETA).\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required. Use a poll interval of >= 5 seconds."
+    )
 )
 @mcp_error_handler
 def deliver_status() -> dict:
@@ -1213,10 +1471,12 @@ def deliver_status() -> dict:
 
 
 @mcp.tool(
-    description="レンダージョブを削除する（破壊的操作）。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- job_idはdeliver_list_jobsで確認した値を使うこと"
+    description=(
+        "Delete a render job from the queue.\n"
+        "[risk_level: destroy] [mutating: true] [supports_dry_run: true]\n"
+        "Params: job_id (str), dry_run (bool, default=True).\n"
+        "IMPORTANT: Get job_id from deliver_list_jobs first."
+    )
 )
 @mcp_error_handler
 def deliver_delete_job(job_id: str, dry_run: bool = True) -> dict:
@@ -1224,10 +1484,12 @@ def deliver_delete_job(job_id: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="全レンダージョブを削除する（破壊的操作）。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認し、ユーザーの明示的な承認を得てから実行\n"
-    "- 復元不可"
+    description=(
+        "Delete all render jobs from the queue. This action is irreversible.\n"
+        "[risk_level: destroy] [mutating: true] [supports_dry_run: true]\n"
+        "Params: dry_run (bool, default=True).\n"
+        "IMPORTANT: Always dry_run=True first and obtain explicit user approval."
+    )
 )
 @mcp_error_handler
 def deliver_delete_all_jobs(dry_run: bool = True) -> dict:
@@ -1235,8 +1497,11 @@ def deliver_delete_all_jobs(dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="特定レンダージョブのステータスを返す。\n"
-    "AGENT RULES:\n- job_idはdeliver_list_jobsで確認した値を使うこと"
+    description=(
+        "Get the status of a specific render job.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: job_id (str) — from deliver_list_jobs."
+    )
 )
 @mcp_error_handler
 def deliver_job_status(job_id: str) -> dict:
@@ -1244,8 +1509,11 @@ def deliver_job_status(job_id: str) -> dict:
 
 
 @mcp.tool(
-    description="レンダー中かどうかを返す。\n"
-    "AGENT RULES:\n- 引数不要。"
+    description=(
+        "Check if rendering is currently in progress.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required."
+    )
 )
 @mcp_error_handler
 def deliver_is_rendering() -> dict:
@@ -1253,8 +1521,11 @@ def deliver_is_rendering() -> dict:
 
 
 @mcp.tool(
-    description="レンダーフォーマット一覧を返す。\n"
-    "AGENT RULES:\n- 引数不要。"
+    description=(
+        "List available render output formats.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required."
+    )
 )
 @mcp_error_handler
 def deliver_format_list() -> dict:
@@ -1262,8 +1533,11 @@ def deliver_format_list() -> dict:
 
 
 @mcp.tool(
-    description="指定フォーマットのコーデック一覧を返す。\n"
-    "AGENT RULES:\n- format_nameはdeliver_format_listで確認した値を使うこと"
+    description=(
+        "List available codecs for a given render format.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "Params: format_name (str) — from deliver_format_list."
+    )
 )
 @mcp_error_handler
 def deliver_codec_list(format_name: str) -> dict:
@@ -1271,10 +1545,12 @@ def deliver_codec_list(format_name: str) -> dict:
 
 
 @mcp.tool(
-    description="レンダープリセットをインポートする。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    '- pathはシステム上の絶対パス（".."を含むパスは拒絶される）'
+    description=(
+        "Import a render preset from a file.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: path (str, absolute), dry_run (bool, default=True).\n"
+        "Path traversal ('..') is rejected for security."
+    )
 )
 @mcp_error_handler
 def deliver_preset_import(path: str, dry_run: bool = True) -> dict:
@@ -1282,10 +1558,12 @@ def deliver_preset_import(path: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="レンダープリセットをエクスポートする。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    '- pathはシステム上の絶対パス（".."を含むパスは拒絶される）'
+    description=(
+        "Export a render preset to a file.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: name (str), path (str, absolute), dry_run (bool, default=True).\n"
+        "Path traversal ('..') is rejected for security."
+    )
 )
 @mcp_error_handler
 def deliver_preset_export(
@@ -1298,8 +1576,11 @@ def deliver_preset_export(
 
 
 @mcp.tool(
-    description="ギャラリーアルバム一覧を返す。\n"
-    "AGENT RULES:\n- 引数不要。"
+    description=(
+        "List all gallery albums.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required."
+    )
 )
 @mcp_error_handler
 def gallery_album_list() -> list[dict]:
@@ -1307,8 +1588,11 @@ def gallery_album_list() -> list[dict]:
 
 
 @mcp.tool(
-    description="現在のギャラリーアルバムを取得する。\n"
-    "AGENT RULES:\n- 引数不要。"
+    description=(
+        "Get the current gallery album.\n"
+        "[risk_level: read] [mutating: false]\n"
+        "No parameters required."
+    )
 )
 @mcp_error_handler
 def gallery_album_current() -> dict:
@@ -1316,10 +1600,11 @@ def gallery_album_current() -> dict:
 
 
 @mcp.tool(
-    description="ギャラリーアルバムを切り替える。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- nameはgallery_album_listで確認した値を使うこと"
+    description=(
+        "Switch to a different gallery album.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: name (str) — album name from gallery_album_list, dry_run (bool, default=True)."
+    )
 )
 @mcp_error_handler
 def gallery_album_set(name: str, dry_run: bool = True) -> dict:
@@ -1327,8 +1612,11 @@ def gallery_album_set(name: str, dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="新規ギャラリーアルバムを作成する。\n"
-    "AGENT RULES:\n- 必ずdry_run=Trueで事前確認すること"
+    description=(
+        "Create a new gallery album.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: dry_run (bool, default=True)."
+    )
 )
 @mcp_error_handler
 def gallery_album_create(dry_run: bool = True) -> dict:
@@ -1336,11 +1624,14 @@ def gallery_album_create(dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="スチルをファイルにエクスポートする。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    '- folder_pathはシステム上の絶対パス（".."を含むパスは拒絶される）\n'
-    '- format: dpx, cin, tif, jpg, png, tga, bmp, exr'
+    description=(
+        "Export stills from the current album to files.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: folder_path (str, absolute), file_prefix (str, default='still'),\n"
+        "format (str, default='dpx') — dpx, cin, tif, jpg, png, tga, bmp, exr.\n"
+        "dry_run (bool, default=True).\n"
+        "Path traversal ('..') is rejected for security."
+    )
 )
 @mcp_error_handler
 def gallery_still_export(
@@ -1358,10 +1649,12 @@ def gallery_still_export(
 
 
 @mcp.tool(
-    description="スチルをインポートする。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    '- pathsには絶対パスのリストを渡すこと（".."を含むパスは拒絶される）'
+    description=(
+        "Import stills into the current gallery album.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: paths (list[str], absolute paths), dry_run (bool, default=True).\n"
+        "Path traversal ('..') is rejected for security."
+    )
 )
 @mcp_error_handler
 def gallery_still_import(paths: list[str], dry_run: bool = True) -> dict:
@@ -1369,10 +1662,12 @@ def gallery_still_import(paths: list[str], dry_run: bool = True) -> dict:
 
 
 @mcp.tool(
-    description="スチルを削除する（破壊的操作）。\n"
-    "AGENT RULES:\n"
-    "- 必ずdry_run=Trueで事前確認すること\n"
-    "- still_indicesはcolor_still_listで確認したインデックスのリスト"
+    description=(
+        "Delete stills from the current gallery album. This action is irreversible.\n"
+        "[risk_level: destroy] [mutating: true] [supports_dry_run: true]\n"
+        "Params: still_indices (list[int]) — from color_still_list, dry_run (bool, default=True).\n"
+        "IMPORTANT: Always dry_run=True first and obtain user approval."
+    )
 )
 @mcp_error_handler
 def gallery_still_delete(
