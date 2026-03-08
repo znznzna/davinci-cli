@@ -6,6 +6,7 @@ from click.testing import CliRunner
 
 from davinci_cli.cli import dr
 from davinci_cli.commands.timeline import (
+    _get_start_frame_offset,
     current_item_impl,
     marker_add_impl,
     marker_delete_impl,
@@ -145,11 +146,90 @@ class TestTimelineExportImpl:
         assert result["format"] == "xml"
 
 
+class TestGetStartFrameOffset:
+    """_get_start_frame_offset のユニットテスト。"""
+
+    def test_zero_offset(self):
+        tl = MagicMock()
+        tl.GetStartTimecode.return_value = "00:00:00:00"
+        tl.GetSetting.return_value = "24"
+        assert _get_start_frame_offset(tl) == 0
+
+    def test_one_hour_at_24fps(self):
+        tl = MagicMock()
+        tl.GetStartTimecode.return_value = "01:00:00:00"
+        tl.GetSetting.return_value = "24"
+        assert _get_start_frame_offset(tl) == 86400  # 1*3600*24
+
+    def test_one_hour_at_30fps(self):
+        tl = MagicMock()
+        tl.GetStartTimecode.return_value = "01:00:00:00"
+        tl.GetSetting.return_value = "30"
+        assert _get_start_frame_offset(tl) == 108000  # 1*3600*30
+
+    def test_complex_timecode(self):
+        tl = MagicMock()
+        tl.GetStartTimecode.return_value = "01:02:03:04"
+        tl.GetSetting.return_value = "24"
+        # 1*3600*24 + 2*60*24 + 3*24 + 4 = 86400 + 2880 + 72 + 4 = 89356
+        assert _get_start_frame_offset(tl) == 89356
+
+    def test_drop_frame_semicolon(self):
+        tl = MagicMock()
+        tl.GetStartTimecode.return_value = "01:00:00;00"
+        tl.GetSetting.return_value = "30"
+        assert _get_start_frame_offset(tl) == 108000
+
+    def test_none_timecode_defaults_zero(self):
+        tl = MagicMock()
+        tl.GetStartTimecode.return_value = None
+        tl.GetSetting.return_value = "24"
+        assert _get_start_frame_offset(tl) == 0
+
+    def test_none_fps_defaults_24(self):
+        tl = MagicMock()
+        tl.GetStartTimecode.return_value = "01:00:00:00"
+        tl.GetSetting.return_value = None
+        assert _get_start_frame_offset(tl) == 86400  # default 24fps
+
+
 class TestMarkerImpl:
     def test_marker_list(self, mock_resolve):
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = marker_list_impl()
         assert isinstance(result, list)
+
+    def test_marker_list_frame_offset_applied(self, mock_resolve):
+        """開始TC=01:00:00:00のとき、marker_listのframe_idにオフセットが加算される。"""
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.GetStartTimecode.return_value = "01:00:00:00"
+        timeline.GetMarkers.return_value = {
+            0: {"color": "Blue", "name": "Start", "note": "", "duration": 1},
+            100: {"color": "Red", "name": "Cut", "note": "", "duration": 1},
+        }
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = marker_list_impl()
+        assert result[0]["frame_id"] == 86400  # 0 + 86400
+        assert result[1]["frame_id"] == 86500  # 100 + 86400
+
+    def test_marker_add_converts_absolute_to_relative(self, mock_resolve):
+        """marker_addは絶対フレーム→相対フレームに変換してAPIを呼ぶ。"""
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.GetStartTimecode.return_value = "01:00:00:00"
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = marker_add_impl(frame_id=86500, color="Blue", name="Test")
+        # API should receive relative frame: 86500 - 86400 = 100
+        timeline.AddMarker.assert_called_once_with(100, "Blue", "Test", "", 1)
+        assert result["frame_id"] == 86500
+
+    def test_marker_delete_converts_absolute_to_relative(self, mock_resolve):
+        """marker_deleteは絶対フレーム→相対フレームに変換してAPIを呼ぶ。"""
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.GetStartTimecode.return_value = "01:00:00:00"
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            marker_delete_impl(frame_id=86500)
+        # API should receive relative frame: 86500 - 86400 = 100
+        timeline.DeleteMarkerAtFrame.assert_called_once_with(100)
 
     def test_marker_add_dry_run(self):
         result = marker_add_impl(

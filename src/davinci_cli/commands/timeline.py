@@ -234,6 +234,18 @@ def _get_current_timeline() -> Any:
     return tl
 
 
+def _get_start_frame_offset(tl: Any) -> int:
+    """タイムラインの開始タイムコードをフレーム数に変換して返す。"""
+    tc = tl.GetStartTimecode() or "00:00:00:00"
+    parts = tc.replace(";", ":").split(":")
+    if len(parts) != 4:
+        return 0
+    h, m, s, f = (int(p) for p in parts)
+    fps_str = tl.GetSetting("timelineFrameRate") or "24"
+    fps = int(float(fps_str))
+    return h * 3600 * fps + m * 60 * fps + s * fps + f
+
+
 def _get_timeline_by_name(project: Any, name: str) -> Any:
     count = project.GetTimelineCount()
     for i in range(1, count + 1):
@@ -370,16 +382,17 @@ def marker_list_impl(timeline_name: str | None = None) -> list[dict]:
     )
     if not tl:
         raise ProjectNotOpenError()
+    offset = _get_start_frame_offset(tl)
     markers = tl.GetMarkers() or {}
     return [
         {
-            "frame_id": frame_id,
+            "frame_id": rel_frame + offset,
             "color": info.get("color", ""),
             "name": info.get("name", ""),
             "note": info.get("note", ""),
             "duration": info.get("duration", 1),
         }
-        for frame_id, info in markers.items()
+        for rel_frame, info in markers.items()
     ]
 
 
@@ -403,7 +416,9 @@ def marker_add_impl(
     tl = project.GetCurrentTimeline()
     if not tl:
         raise ProjectNotOpenError()
-    tl.AddMarker(frame_id, color, name, note or "", duration)
+    offset = _get_start_frame_offset(tl)
+    rel_frame = frame_id - offset
+    tl.AddMarker(rel_frame, color, name, note or "", duration)
     return {"added": True, "frame_id": frame_id}
 
 
@@ -418,7 +433,9 @@ def marker_delete_impl(frame_id: int, dry_run: bool = False) -> dict:
     tl = project.GetCurrentTimeline()
     if not tl:
         raise ProjectNotOpenError()
-    tl.DeleteMarkerAtFrame(frame_id)
+    offset = _get_start_frame_offset(tl)
+    rel_frame = frame_id - offset
+    tl.DeleteMarkerAtFrame(rel_frame)
     return {"deleted": True, "frame_id": frame_id}
 
 
