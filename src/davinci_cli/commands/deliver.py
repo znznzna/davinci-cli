@@ -162,7 +162,7 @@ def _get_current_project() -> Any:
 
 def deliver_preset_list_impl() -> list[dict]:
     project = _get_current_project()
-    presets = project.GetRenderPresets() or []
+    presets = project.GetRenderPresetList() or []
     return [{"name": p} for p in presets]
 
 

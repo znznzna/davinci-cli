@@ -30,7 +30,7 @@ def mock_resolve():
     resolve = MagicMock()
     pm = MagicMock()
     project = MagicMock()
-    project.GetRenderPresets.return_value = ["H.264 Master", "YouTube 1080p"]
+    project.GetRenderPresetList.return_value = ["H.264 Master", "YouTube 1080p"]
     project.LoadRenderPreset.return_value = True
     project.GetRenderJobList.return_value = [
         {
@@ -52,6 +52,15 @@ class TestDeliverPresetImpl:
             result = deliver_preset_list_impl()
         assert len(result) == 2
         assert result[0]["name"] == "H.264 Master"
+
+    def test_list_presets_calls_get_render_preset_list(self, mock_resolve):
+        project = mock_resolve.GetProjectManager().GetCurrentProject()
+        project.GetRenderPresetList.return_value = ["H.264 Master", "YouTube 1080p"]
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = deliver_preset_list_impl()
+        assert len(result) == 2
+        assert result[0]["name"] == "H.264 Master"
+        project.GetRenderPresetList.assert_called_once()
 
     def test_load_not_found(self, mock_resolve):
         mock_resolve.GetProjectManager().GetCurrentProject().LoadRenderPreset.return_value = (
