@@ -129,3 +129,46 @@ class TestBeatMarkerImplDryRun:
         assert result["frames"][0] == 86400
         assert result["frames"][1] == 86412
         assert result["count"] == 21
+
+
+class TestBeatMarkerImplExecute:
+    def test_adds_markers_to_timeline(self, mock_resolve):
+        """マーカーが実際に追加される"""
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = beat_marker_impl(bpm=120, note_value="1/4")
+        assert result["added_count"] == 21
+        assert result["bpm"] == 120
+        assert result["note_value"] == "1/4"
+        assert result["color"] == "Blue"
+        assert len(result["frames"]) == 21
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        assert timeline.AddMarker.call_count == 21
+
+    def test_adds_markers_with_relative_frames(self, mock_resolve):
+        """AddMarker は相対フレームで呼ばれる"""
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            beat_marker_impl(bpm=120, note_value="1/4")
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        first_call = timeline.AddMarker.call_args_list[0]
+        assert first_call[0][0] == 0  # rel_frame
+        assert first_call[0][1] == "Blue"
+        second_call = timeline.AddMarker.call_args_list[1]
+        assert second_call[0][0] == 12
+
+    def test_custom_color_and_name(self, mock_resolve):
+        """カスタム色・名前が AddMarker に渡る"""
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = beat_marker_impl(bpm=120, note_value="1/4", color="Red", name="Beat")
+        assert result["color"] == "Red"
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        first_call = timeline.AddMarker.call_args_list[0]
+        assert first_call[0][1] == "Red"
+        assert first_call[0][2] == "Beat"
+
+    def test_custom_duration(self, mock_resolve):
+        """カスタム duration が AddMarker に渡る"""
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            beat_marker_impl(bpm=120, note_value="1/4", duration=5)
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        first_call = timeline.AddMarker.call_args_list[0]
+        assert first_call[0][4] == 5
