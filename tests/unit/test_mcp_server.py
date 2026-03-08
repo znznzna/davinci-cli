@@ -34,7 +34,7 @@ EXPECTED_TOOLS = [
     "project_info",
     "project_settings_get",
     "project_settings_set",
-    # timeline (20)
+    # timeline (21)
     "timeline_list",
     "timeline_current",
     "timeline_switch",
@@ -55,6 +55,7 @@ EXPECTED_TOOLS = [
     "timeline_marker_list",
     "timeline_marker_add",
     "timeline_marker_delete",
+    "timeline_marker_beats",
     # clip (13)
     "clip_list",
     "clip_info",
