@@ -88,10 +88,37 @@ class TestColorResetImpl:
 
 
 class TestColorGradeImpl:
+    def test_copy_grade_dry_run(self):
+        result = color_copy_grade_impl(from_index=0, to_index=1, dry_run=True)
+        assert result == {
+            "dry_run": True,
+            "action": "copy_grade",
+            "from_index": 0,
+            "to_index": 1,
+        }
+
     def test_copy_grade(self, mock_resolve):
+        # Need two clips for from/to
+        src_clip = MagicMock()
+        tgt_clip = MagicMock()
+        src_clip.CopyGrades.return_value = True
+        pm = mock_resolve.GetProjectManager()
+        tl = pm.GetCurrentProject().GetCurrentTimeline()
+        tl.GetItemListInTrack.return_value = [src_clip, tgt_clip]
+
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            result = color_copy_grade_impl(from_index=0)
-        assert result["copied_from"] == 0
+            result = color_copy_grade_impl(from_index=0, to_index=1)
+        src_clip.CopyGrades.assert_called_once_with([tgt_clip])
+        assert result == {"copied_from": 0, "copied_to": 1}
+
+    def test_copy_grade_cli_dry_run(self):
+        result = CliRunner().invoke(
+            dr, ["color", "copy-grade", "--from", "0", "--to", "1", "--dry-run"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["dry_run"] is True
+        assert data["action"] == "copy_grade"
 
 
 

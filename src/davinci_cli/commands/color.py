@@ -46,6 +46,9 @@ class ColorResetOutput(BaseModel):
 
 class ColorCopyGradeOutput(BaseModel):
     copied_from: int
+    copied_to: int | None = None
+    dry_run: bool | None = None
+    action: str | None = None
 
 
 class NodeInfo(BaseModel):
@@ -136,11 +139,28 @@ def color_reset_impl(clip_index: int, dry_run: bool = False) -> dict:
     return {"reset": True, "clip_index": clip_index}
 
 
-def color_copy_grade_impl(from_index: int) -> dict:
+def color_copy_grade_impl(
+    from_index: int,
+    to_index: int,
+    dry_run: bool = False,
+) -> dict:
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "copy_grade",
+            "from_index": from_index,
+            "to_index": to_index,
+        }
     tl = _get_current_timeline()
-    clip_item = _get_clip_item_by_index(tl, from_index)
-    clip_item.CopyGrades()
-    return {"copied_from": from_index}
+    src_clip = _get_clip_item_by_index(tl, from_index)
+    tgt_clip = _get_clip_item_by_index(tl, to_index)
+    result = src_clip.CopyGrades([tgt_clip])
+    if result is False:
+        raise ValidationError(
+            field="copy_grade",
+            reason="CopyGrades failed",
+        )
+    return {"copied_from": from_index, "copied_to": to_index}
 
 
 def node_list_impl(clip_index: int) -> list[dict]:
@@ -225,10 +245,16 @@ def color_reset(
 
 @color.command(name="copy-grade")
 @click.option("--from", "from_index", type=int, required=True)
+@click.option("--to", "to_index", type=int, required=True)
+@dry_run_option
 @click.pass_context
-def copy_grade(ctx: click.Context, from_index: int) -> None:
+def copy_grade(
+    ctx: click.Context, from_index: int, to_index: int, dry_run: bool
+) -> None:
     """グレードをコピーする。"""
-    result = color_copy_grade_impl(from_index=from_index)
+    result = color_copy_grade_impl(
+        from_index=from_index, to_index=to_index, dry_run=dry_run
+    )
     output(result, pretty=ctx.obj.get("pretty"))
 
 
