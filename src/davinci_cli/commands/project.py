@@ -295,11 +295,22 @@ def project_create_cmd(
 
 
 @project.command(name="delete")
-@click.argument("name")
+@click.argument("name", required=False)
+@json_input_option
 @dry_run_option
 @click.pass_context
-def project_delete_cmd(ctx: click.Context, name: str, dry_run: bool) -> None:
+def project_delete_cmd(
+    ctx: click.Context,
+    name: str | None,
+    json_input: dict | None,
+    dry_run: bool,
+) -> None:
     """プロジェクト削除（破壊的操作）。"""
+    if json_input:
+        data = ProjectDeleteInput.model_validate(json_input)
+        name = data.name
+    if not name:
+        raise click.UsageError("name is required (positional argument or --json)")
     result = project_delete_impl(name=name, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
 
