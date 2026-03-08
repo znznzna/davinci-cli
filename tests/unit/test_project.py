@@ -200,6 +200,19 @@ class TestProjectCLI:
         result = CliRunner().invoke(dr, ["project", "delete"])
         assert result.exit_code != 0
 
+    def test_project_rename_json_input(self):
+        result = CliRunner().invoke(
+            dr, ["project", "rename", "--json", '{"name": "NewName"}', "--dry-run"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["dry_run"] is True
+        assert data["name"] == "NewName"
+
+    def test_project_rename_no_name_error(self):
+        result = CliRunner().invoke(dr, ["project", "rename"])
+        assert result.exit_code != 0
+
     def test_project_info_with_fields(self, mock_resolve):
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = CliRunner().invoke(

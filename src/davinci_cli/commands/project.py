@@ -67,6 +67,10 @@ class ProjectDeleteInput(BaseModel):
     name: str
 
 
+class ProjectRenameInput(BaseModel):
+    name: str
+
+
 class ProjectRenameOutput(BaseModel):
     renamed: bool | None = None
     name: str
@@ -316,11 +320,22 @@ def project_delete_cmd(
 
 
 @project.command(name="rename")
-@click.argument("name")
+@click.argument("name", required=False)
+@json_input_option
 @dry_run_option
 @click.pass_context
-def project_rename(ctx: click.Context, name: str, dry_run: bool) -> None:
+def project_rename(
+    ctx: click.Context,
+    name: str | None,
+    json_input: dict | None,
+    dry_run: bool,
+) -> None:
     """プロジェクト名を変更する。"""
+    if json_input:
+        data = ProjectRenameInput.model_validate(json_input)
+        name = data.name
+    if not name:
+        raise click.UsageError("name is required (positional argument or --json)")
     result = project_rename_impl(name=name, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
 
@@ -386,7 +401,11 @@ register_schema(
     output_model=ProjectDeleteOutput,
     input_model=ProjectDeleteInput,
 )
-register_schema("project.rename", output_model=ProjectRenameOutput)
+register_schema(
+    "project.rename",
+    output_model=ProjectRenameOutput,
+    input_model=ProjectRenameInput,
+)
 register_schema("project.save", output_model=ProjectSaveOutput)
 register_schema("project.info", output_model=ProjectInfoOutput)
 register_schema("project.settings.get", output_model=ProjectSettingsGetOutput)
