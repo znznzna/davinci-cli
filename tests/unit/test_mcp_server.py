@@ -412,6 +412,26 @@ class TestMCPDescriptions:
             )
 
 
+class TestMCPInstructions:
+    def test_mcp_has_instructions(self):
+        """MCP サーバーに instructions が設定されていることを確認する。"""
+        assert mcp.instructions is not None
+        assert len(mcp.instructions) > 0
+
+    def test_instructions_contains_key_sections(self):
+        """instructions に必須セクションが含まれていることを確認する。"""
+        instructions = mcp.instructions
+        assert "Getting Started" in instructions
+        assert "Safety Rules" in instructions
+        assert "Error Recovery" in instructions
+        assert "Key Workflows" in instructions
+        assert "Tips" in instructions
+
+    def test_instructions_mentions_system_ping(self):
+        """instructions が system_ping を最初のステップとして言及していることを確認する。"""
+        assert "system_ping" in mcp.instructions
+
+
 class TestMCPErrorHandler:
     def test_error_handler_returns_structured_error(self):
         from davinci_cli.core.exceptions import ResolveNotRunningError

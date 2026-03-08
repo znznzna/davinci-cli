@@ -132,6 +132,7 @@ from davinci_cli.commands.timeline import (
     track_lock_impl,
 )
 from davinci_cli.core.exceptions import DavinciCLIError
+from davinci_cli.mcp.instructions import INSTRUCTIONS
 
 # --- Error Handler ---
 
@@ -163,7 +164,7 @@ def mcp_error_handler(func: Callable) -> Callable:
 
 # --- MCP Server ---
 
-mcp = FastMCP("davinci-cli")
+mcp = FastMCP("davinci-cli", instructions=INSTRUCTIONS)
 
 
 # ---- system ----
