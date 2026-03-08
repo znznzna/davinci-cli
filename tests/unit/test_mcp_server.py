@@ -23,7 +23,7 @@ EXPECTED_TOOLS = [
     "system_page_set",
     "system_keyframe_mode_get",
     "system_keyframe_mode_set",
-    # project (9)
+    # project (11)
     "project_list",
     "project_open",
     "project_close",
@@ -32,7 +32,9 @@ EXPECTED_TOOLS = [
     "project_rename",
     "project_save",
     "project_info",
-    # timeline (16)
+    "project_settings_get",
+    "project_settings_set",
+    # timeline (20)
     "timeline_list",
     "timeline_current",
     "timeline_switch",
@@ -49,10 +51,15 @@ EXPECTED_TOOLS = [
     "timeline_duplicate",
     "timeline_detect_scene_cuts",
     "timeline_create_subtitles",
-    # clip (12)
+    "timeline_export",
+    "timeline_marker_list",
+    "timeline_marker_add",
+    "timeline_marker_delete",
+    # clip (13)
     "clip_list",
     "clip_info",
     "clip_select",
+    "clip_property_get",
     "clip_property_set",
     "clip_enable",
     "clip_color_get",
@@ -79,7 +86,7 @@ EXPECTED_TOOLS = [
     "color_reset_all",
     "color_still_grab",
     "color_still_list",
-    # media (10)
+    # media (13)
     "media_list",
     "media_import",
     "media_move",
@@ -90,6 +97,9 @@ EXPECTED_TOOLS = [
     "media_metadata_set",
     "media_export_metadata",
     "media_transcribe",
+    "media_folder_list",
+    "media_folder_create",
+    "media_folder_delete",
     # deliver (15)
     "deliver_preset_list",
     "deliver_preset_load",
@@ -256,6 +266,52 @@ class TestMCPNewToolsRegistered:
             assert name in tool_names, f"{name} not found"
 
 
+class TestMCPParityTools:
+    """CLI↔MCP パリティ修正で追加されたツールのテスト。"""
+
+    def test_project_settings_tools(self):
+        tool_names = _get_tool_names()
+        assert "project_settings_get" in tool_names
+        assert "project_settings_set" in tool_names
+
+    def test_timeline_export_tool(self):
+        tool_names = _get_tool_names()
+        assert "timeline_export" in tool_names
+
+    def test_timeline_marker_tools(self):
+        tool_names = _get_tool_names()
+        assert "timeline_marker_list" in tool_names
+        assert "timeline_marker_add" in tool_names
+        assert "timeline_marker_delete" in tool_names
+
+    def test_clip_property_get_tool(self):
+        tool_names = _get_tool_names()
+        assert "clip_property_get" in tool_names
+
+    def test_media_folder_tools(self):
+        tool_names = _get_tool_names()
+        assert "media_folder_list" in tool_names
+        assert "media_folder_create" in tool_names
+        assert "media_folder_delete" in tool_names
+
+    def test_parity_tools_dry_run_defaults(self):
+        """パリティ修正ツールのdry_runデフォルトがTrueであることを確認する。"""
+        dry_run_tools = [
+            "project_settings_set",
+            "timeline_export",
+            "timeline_marker_add",
+            "timeline_marker_delete",
+            "media_folder_delete",
+        ]
+        tools = _list_tools()
+        for name in dry_run_tools:
+            tool = next(t for t in tools if t.name == name)
+            sig = inspect.signature(tool.fn)
+            assert sig.parameters["dry_run"].default is True, (
+                f"{name} dry_run default is not True"
+            )
+
+
 class TestMCPDryRunDefaults:
     def _get_tool_fn(self, name: str):
         tools = _list_tools()
@@ -312,6 +368,11 @@ class TestMCPDryRunDefaults:
             "gallery_still_export",
             "gallery_still_import",
             "gallery_still_delete",
+            "project_settings_set",
+            "timeline_export",
+            "timeline_marker_add",
+            "timeline_marker_delete",
+            "media_folder_delete",
         ]
         for name in dry_run_tools:
             fn = self._get_tool_fn(name)

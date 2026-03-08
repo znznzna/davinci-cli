@@ -6,128 +6,302 @@ description: DaVinci Resolve CLI / MCP — agent-first interface
 
 # davinci-cli Skill
 
-DaVinci Resolve をコマンドラインから操作する CLI / MCP サーバー。
+CLI and MCP server for controlling DaVinci Resolve. Designed for AI agents.
 
-## AGENT RULES
+## Agent Quick Contract
 
-1. **破壊的操作は必ず `--dry-run` で事前確認** してからユーザーに提示し、承認を得て実行する
-2. **`--fields` で出力フィールドを絞る** — コンテキストウィンドウの消費を最小化する
-3. **`--json` で構造化入力** — エージェントからの入力は `--json '{"key": "value"}'` 形式を推奨
-4. **エラーは JSON で返る** — `{"error": "...", "error_type": "...", "exit_code": N}`
+1. **Always use `--fields`** to limit response size (e.g., `--fields name,fps`).
+2. **Check `dr schema show <command>`** for parameter types before calling.
+3. **Use `--dry-run`** before mutating commands to preview changes.
+4. **Use `--json`** for structured input (e.g., `--json '{"name": "MyProject"}'`).
+5. **Exit codes matter:** 0=ok, 1=resolve not running, 2=no project, 3=validation, 4=env, 5=edition.
+6. **All Resolve API writes are irreversible** (no undo) — always dry-run first.
 
-## 使用パターン
-
-### 接続確認パターン
-
-```bash
-dr system ping
-dr system info
-```
-
-### 読み取りパターン
+## Schema-First Discovery
 
 ```bash
-dr project list --fields name
-dr timeline list --fields name,fps
-dr clip list --fields index,name
-dr media list --fields clip_name
+# List all registered commands
 dr schema list
+
+# Get JSON Schema for a specific command
 dr schema show project.open
 ```
 
-### 書き込みパターン（--dry-run 必須）
+Output includes `input_schema` (parameters) and `output_schema` (return type).
+
+## Getting Started for Agents
 
 ```bash
-# Step 1: dry-run で確認
-dr project open "MyProject" --dry-run
-# Step 2: ユーザー承認後に実行
-dr project open "MyProject"
+# Step 1: Verify connection
+dr system ping
+
+# Step 2: Get version, edition, current project
+dr system info
+
+# Step 3: List projects
+dr project list --fields name
+
+# Step 4: Open a project (dry-run first!)
+dr project open "ProjectName" --dry-run
+# → Confirm with user → then:
+dr project open "ProjectName"
+
+# Step 5: List timelines
+dr timeline list --fields name
+
+# Step 6: List clips
+dr clip list --fields index,name
 ```
 
-## コマンド一覧
+## Module Overview
 
-### dr system
-- `dr system ping` — 接続確認
-- `dr system version` — バージョン情報
-- `dr system edition` — エディション（Free/Studio）
-- `dr system info` — 総合情報
+| Module | Description |
+|--------|-------------|
+| **system** | Connection check, version/edition info, page/keyframe control |
+| **project** | List, open, close, create, delete, save, rename, settings |
+| **timeline** | List, switch, create, delete, export, tracks, timecode, markers, duplicate, scene cuts, subtitles |
+| **clip** | List timeline clips, info, select, properties, enable, color labels, flags |
+| **color** | LUT apply, grade reset/copy, color versions, node LUT, CDL, LUT export, stills |
+| **media** | Media pool: list, import, move, delete, relink, metadata, transcribe, folders |
+| **deliver** | Render queue: presets, jobs, start/stop, status, formats/codecs, preset import/export |
+| **gallery** | Gallery albums, still export/import/delete |
+| **schema** | Command discovery: list all commands, show JSON Schema for any command |
 
-### dr schema
-- `dr schema list` — 登録コマンド一覧
-- `dr schema show <command>` — コマンドの JSON Schema
+## Common Workflows
 
-### dr project
-- `dr project list [--fields]` — プロジェクト一覧
-- `dr project info [--fields]` — 現在のプロジェクト情報
-- `dr project open <name> [--dry-run]` — プロジェクトを開く
-- `dr project close [--dry-run]` — プロジェクトを閉じる
-- `dr project create --name <name> [--dry-run]` — 新規作成
-- `dr project delete <name> [--dry-run]` — 削除
-- `dr project save` — 保存
-- `dr project settings get <key>` — 設定取得
-- `dr project settings set <key> <value> [--dry-run]` — 設定変更
+### Color Grading Pipeline
 
-### dr timeline
-- `dr timeline list [--fields]` — タイムライン一覧
-- `dr timeline current [--fields]` — 現在のタイムライン
-- `dr timeline switch <name> [--dry-run]` — 切り替え
-- `dr timeline create --name <name> [--dry-run]` — 新規作成
-- `dr timeline delete <name> [--dry-run]` — 削除
-- `dr timeline export --json '...' [--dry-run]` — エクスポート
-- `dr timeline marker list` — マーカー一覧
-- `dr timeline marker add --json '...' [--dry-run]` — マーカー追加
-- `dr timeline marker delete <frame_id> [--dry-run]` — マーカー削除
+```bash
+# 1. Get clip indices
+dr clip list --fields index,name
 
-### dr clip
-- `dr clip list [--fields] [--timeline]` — クリップ一覧
-- `dr clip info <index> [--fields]` — クリップ詳細
-- `dr clip select <index>` — クリップ選択
-- `dr clip property get <index> <key>` — プロパティ取得
-- `dr clip property set <index> <key> <value> [--dry-run]` — プロパティ設定
+# 2. Save a checkpoint (Resolve API has NO undo!)
+dr color version add 1 "before-edit" --dry-run
+dr color version add 1 "before-edit"
 
-### dr color
-- `dr color apply-lut <clip_index> <lut_path> [--dry-run]` — LUT 適用
-- `dr color reset <clip_index> [--dry-run]` — グレードリセット
-- `dr color copy-grade --from <index>` — グレードコピー
-- `dr color paste-grade --to <index> [--dry-run]` — グレードペースト
-- `dr color node list <clip_index>` — ノード一覧
-- `dr color node add <clip_index> [--dry-run]` — ノード追加
-- `dr color node delete <clip_index> <node_index> [--dry-run]` — ノード削除
-- `dr color still list` — スチル一覧
-- `dr color still grab <clip_index> [--dry-run]` — スチル取得
-- `dr color still apply <clip_index> <still_index> [--dry-run]` — スチル適用
+# 3. Apply LUT
+dr color apply-lut 1 /path/to/lut.cube --dry-run
+dr color apply-lut 1 /path/to/lut.cube
 
-### dr media
-- `dr media list [--folder] [--fields]` — メディア一覧
-- `dr media import <paths...>` — メディアインポート
-- `dr media folder list` — フォルダ一覧
-- `dr media folder create <name>` — フォルダ作成
-- `dr media folder delete <name> [--dry-run]` — フォルダ削除
+# 4. Copy grade to another clip
+dr color copy-grade --from 1 --to 2 --dry-run
+dr color copy-grade --from 1 --to 2
 
-### dr deliver
-- `dr deliver preset list` — プリセット一覧
-- `dr deliver preset load <name>` — プリセット読み込み
-- `dr deliver add-job --json '...' [--dry-run]` — ジョブ追加
-- `dr deliver list-jobs [--fields]` — ジョブ一覧
-- `dr deliver start [--job-ids] [--dry-run]` — レンダー開始（**--dry-run 必須**）
-- `dr deliver stop` — レンダー停止
-- `dr deliver status` — 進捗確認
+# 5. If unhappy, load the saved version
+dr color version load 1 "before-edit"
+```
 
-## MCP サーバー
+> **Note:** `copy-grade` copies directly from source to destination. There is no separate paste step.
+
+### Render / Deliver Pipeline
+
+```bash
+# 1. Check available presets
+dr deliver preset list
+
+# 2. Load a preset
+dr deliver preset load "YouTube 1080p"
+
+# 3. Add a render job
+dr deliver add-job --json '{"output_dir": "/output", "filename": "final"}' --dry-run
+dr deliver add-job --json '{"output_dir": "/output", "filename": "final"}'
+
+# 4. Start rendering (always dry-run first!)
+dr deliver start --dry-run
+dr deliver start
+
+# 5. Monitor progress (poll interval >= 5s)
+dr deliver status
+```
+
+### Media Organization
+
+```bash
+# 1. List current media pool
+dr media list --fields clip_name,file_path
+
+# 2. Create a folder
+dr media folder create "B-Roll"
+
+# 3. Import files
+dr media import /path/to/file1.mov /path/to/file2.mp4
+
+# 4. Move to folder
+dr media move --clip-names "file1.mov,file2.mp4" --target-folder "B-Roll" --dry-run
+dr media move --clip-names "file1.mov,file2.mp4" --target-folder "B-Roll"
+```
+
+### Timeline Management
+
+```bash
+# 1. List timelines
+dr timeline list --fields name
+
+# 2. Switch to a timeline
+dr timeline switch "Main Edit" --dry-run
+dr timeline switch "Main Edit"
+
+# 3. Duplicate for safety
+dr timeline duplicate --name "Main Edit - Copy" --dry-run
+dr timeline duplicate --name "Main Edit - Copy"
+
+# 4. List clips in the timeline
+dr clip list --fields index,name
+
+# 5. Get current timecode
+dr timeline timecode get
+```
+
+### Gallery Still Management
+
+```bash
+# 1. List gallery albums
+dr gallery album list
+
+# 2. Set current album
+dr gallery album set "Stills" --dry-run
+dr gallery album set "Stills"
+
+# 3. Grab a still from current clip
+dr color still grab 1 --dry-run
+dr color still grab 1
+
+# 4. Export stills
+dr gallery still export --folder-path /output/stills --format png --dry-run
+dr gallery still export --folder-path /output/stills --format png
+```
+
+## Input Options
+
+### `--json` (Structured Input)
+
+Pass complex parameters as a JSON object:
+
+```bash
+dr deliver add-job --json '{"output_dir": "/output", "filename": "final"}'
+```
+
+### `--fields` (Output Filtering)
+
+Limit returned fields to reduce response size:
+
+```bash
+dr project list --fields name
+dr clip list --fields index,name
+```
+
+### `--dry-run` (Preview Mode)
+
+Preview destructive operations before executing:
+
+```bash
+dr project delete "OldProject" --dry-run
+# Returns: {"dry_run": true, "action": "delete", "name": "OldProject"}
+```
+
+## Output Formats
+
+Output format is auto-detected:
+
+| Context | Format |
+|---------|--------|
+| Non-TTY (pipe/agent) | NDJSON (one JSON object per line) or single JSON |
+| TTY + `--pretty` | Rich formatted table |
+
+Error responses always use structured JSON:
+
+```json
+{"error": "...", "error_type": "ResolveNotRunningError", "exit_code": 1}
+```
+
+## Gotchas & Limitations
+
+### No Undo / No Redo
+
+The DaVinci Resolve API provides **no undo mechanism**. Every write operation is permanent.
+**Always** use `--dry-run` first. For color grading, create a color version before editing:
+
+```bash
+dr color version add <clip_index> "checkpoint-name"
+```
+
+### clip_index is timeline-dependent
+
+`clip_index` values belong to the current timeline. When you switch timelines, all previously obtained clip indices become invalid. **Always re-fetch** `clip list` after `timeline switch`.
+
+### node_index is 1-based
+
+Node indices start from 1, not 0. The first node in a clip's node graph is `node_index=1`.
+
+### CopyGrade is a direct operation
+
+`color copy-grade --from X --to Y` copies the grade directly. There is no separate "paste" step (unlike the Resolve GUI's copy/paste workflow).
+
+### Graph object required for node operations
+
+Node operations internally require `TimelineItem.GetNodeGraph()`. This is handled automatically, but it means node operations only work on timeline items (not media pool clips).
+
+### MediaStorage and Fusion are not supported
+
+The CLI does not wrap `MediaStorage` or `Fusion` APIs. Media operations go through the MediaPool API.
+
+### Studio-only features
+
+Some operations require DaVinci Resolve Studio (paid). If called on Free edition, they return `EditionError` (exit_code=5). Check edition with `dr system edition` before attempting.
+
+### Path security
+
+All file path parameters reject path traversal sequences (`..`). Only absolute paths are accepted. Allowed LUT extensions: `.cube`, `.3dl`, `.lut`, `.mga`, `.m3d`.
+
+### Long-running operations
+
+Scene cut detection (`timeline detect-scene-cuts`), subtitle creation (`timeline create-subtitles`), and transcription (`media transcribe`) can take significant time. Do not timeout prematurely.
+
+### Render resource consumption
+
+`deliver start` consumes significant CPU/GPU resources. Always preview with `--dry-run` and obtain user approval. Monitor with `deliver status` at intervals >= 5 seconds.
+
+## Error Handling
+
+All errors return structured JSON with consistent fields:
+
+```json
+{
+  "error": "Human-readable message",
+  "error_type": "ResolveNotRunningError",
+  "exit_code": 1
+}
+```
+
+### Recovery Playbook
+
+| Exit Code | Error Type | Recovery |
+|-----------|------------|----------|
+| 1 | ResolveNotRunningError | Ensure DaVinci Resolve is running, retry `dr system ping`. |
+| 2 | ProjectNotOpenError | Open a project with `dr project open <name>`. |
+| 3 | ValidationError | Check parameter types/values. Use `dr schema show <command>`. |
+| 4 | EnvironmentError | Check `RESOLVE_SCRIPT_API`, `RESOLVE_SCRIPT_LIB`, `RESOLVE_MODULES`. |
+| 5 | EditionError | Feature requires DaVinci Resolve Studio. Check with `dr system edition`. |
+
+## MCP Server
 
 ```bash
 dr-mcp
 ```
 
-MCP サーバーでは全ての破壊的操作の `dry_run` デフォルトが `True`。
-エージェントは明示的に `dry_run=False` を指定しない限り、事前確認モードで動作する。
+The MCP server exposes all CLI commands as MCP tools with snake_case naming (e.g., `project_open`, `clip_list`).
 
-## Exit Codes
+**Key differences from CLI:**
+- All mutating tools default to `dry_run=True` (CLI defaults to `False`).
+- Tool descriptions include metadata tags: `[risk_level]`, `[mutating]`, `[supports_dry_run]`.
+- The server includes built-in instructions for agent onboarding.
 
-| Code | 意味 |
-|------|------|
-| 1 | DaVinci Resolve 未起動 |
-| 2 | プロジェクト未オープン |
-| 3 | バリデーションエラー |
-| 4 | 環境設定エラー |
-| 5 | エディション不一致 |
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `RESOLVE_SCRIPT_API` | Path to DaVinci Resolve scripting API |
+| `RESOLVE_SCRIPT_LIB` | Path to DaVinci Resolve shared library |
+| `RESOLVE_MODULES` | Path to DaVinci Resolve Python modules (added to sys.path) |
+
+Auto-detected on macOS and Windows when not set. See `src/davinci_cli/core/environment.py`.

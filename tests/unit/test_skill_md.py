@@ -16,7 +16,7 @@ def test_skill_md_has_frontmatter():
 
 def test_skill_md_has_agent_rules():
     content = SKILL_MD.read_text(encoding="utf-8")
-    assert "AGENT RULES" in content
+    assert "Agent Quick Contract" in content
     assert "--dry-run" in content
 
 
@@ -37,7 +37,7 @@ def test_skill_md_has_all_command_groups():
 
 def test_skill_md_has_usage_patterns():
     content = SKILL_MD.read_text(encoding="utf-8")
-    assert "パターン" in content or "Pattern" in content
+    assert "Workflow" in content or "Pattern" in content
 
 
 def test_skill_md_deliver_has_mandatory_dry_run():

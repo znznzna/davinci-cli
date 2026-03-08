@@ -23,6 +23,7 @@ from davinci_cli.commands.clip import (
     clip_flag_list_impl,
     clip_info_impl,
     clip_list_impl,
+    clip_property_get_impl,
     clip_property_set_impl,
     clip_select_impl,
 )
@@ -72,6 +73,9 @@ from davinci_cli.commands.gallery import (
     gallery_still_import_impl,
 )
 from davinci_cli.commands.media import (
+    folder_create_impl,
+    folder_delete_impl,
+    folder_list_impl,
     media_delete_impl,
     media_export_metadata_impl,
     media_import_impl,
@@ -92,6 +96,8 @@ from davinci_cli.commands.project import (
     project_open_impl,
     project_rename_impl,
     project_save_impl,
+    project_settings_get_impl,
+    project_settings_set_impl,
 )
 from davinci_cli.commands.system import (
     edition_impl,
@@ -105,6 +111,9 @@ from davinci_cli.commands.system import (
 )
 from davinci_cli.commands.timeline import (
     current_item_impl,
+    marker_add_impl,
+    marker_delete_impl,
+    marker_list_impl,
     timecode_get_impl,
     timecode_set_impl,
     timeline_create_impl,
@@ -113,6 +122,7 @@ from davinci_cli.commands.timeline import (
     timeline_delete_impl,
     timeline_detect_scene_cuts_impl,
     timeline_duplicate_impl,
+    timeline_export_impl,
     timeline_list_impl,
     timeline_switch_impl,
     track_add_impl,
@@ -320,6 +330,24 @@ def project_info(fields: str | None = None) -> dict:
     return project_info_impl(fields=field_list)
 
 
+@mcp.tool(
+    description="プロジェクト設定を取得する。\n"
+    "AGENT RULES:\n- key省略で全設定取得（コンテキストを消費する）"
+)
+@mcp_error_handler
+def project_settings_get(key: str | None = None) -> dict:
+    return project_settings_get_impl(key=key)
+
+
+@mcp.tool(
+    description="プロジェクト設定を変更する。\n"
+    "AGENT RULES:\n- 必ずdry_run=Trueで事前確認すること"
+)
+@mcp_error_handler
+def project_settings_set(key: str, value: str, dry_run: bool = True) -> dict:
+    return project_settings_set_impl(key=key, value=value, dry_run=dry_run)
+
+
 # ---- timeline ----
 
 
@@ -494,6 +522,73 @@ def timeline_create_subtitles() -> dict:
     return timeline_create_subtitles_impl()
 
 
+@mcp.tool(
+    description="タイムラインをファイルにエクスポートする。\n"
+    "AGENT RULES:\n"
+    "- 必ずdry_run=Trueで事前確認すること\n"
+    "- format: AAF, EDL, FCPXML 等\n"
+    '- output_pathはシステム上の絶対パス（".."を含むパスは拒絶される）'
+)
+@mcp_error_handler
+def timeline_export(
+    format: str,
+    output_path: str,
+    timeline_name: str | None = None,
+    dry_run: bool = True,
+) -> dict:
+    return timeline_export_impl(
+        format=format,
+        output_path=output_path,
+        timeline_name=timeline_name,
+        dry_run=dry_run,
+    )
+
+
+@mcp.tool(
+    description="タイムラインのマーカー一覧を返す。\n"
+    "AGENT RULES:\n- timeline_name省略で現在のタイムラインを使用"
+)
+@mcp_error_handler
+def timeline_marker_list(timeline_name: str | None = None) -> list[dict]:
+    return marker_list_impl(timeline_name=timeline_name)
+
+
+@mcp.tool(
+    description="タイムラインにマーカーを追加する。\n"
+    "AGENT RULES:\n"
+    "- 必ずdry_run=Trueで事前確認すること\n"
+    "- color: Blue, Cyan, Green, Yellow, Red, Pink, Purple, Fuchsia, Rose, Lavender, Sky, Mint, Lemon, Sand, Cocoa, Cream"
+)
+@mcp_error_handler
+def timeline_marker_add(
+    frame_id: int,
+    color: str,
+    name: str,
+    note: str | None = None,
+    duration: int = 1,
+    dry_run: bool = True,
+) -> dict:
+    return marker_add_impl(
+        frame_id=frame_id,
+        color=color,
+        name=name,
+        note=note,
+        duration=duration,
+        dry_run=dry_run,
+    )
+
+
+@mcp.tool(
+    description="タイムラインのマーカーを削除する。\n"
+    "AGENT RULES:\n"
+    "- 必ずdry_run=Trueで事前確認すること\n"
+    "- frame_idはtimeline_marker_listで確認した値を使うこと"
+)
+@mcp_error_handler
+def timeline_marker_delete(frame_id: int, dry_run: bool = True) -> dict:
+    return marker_delete_impl(frame_id=frame_id, dry_run=dry_run)
+
+
 # ---- clip ----
 
 
@@ -524,6 +619,15 @@ def clip_info(index: int) -> dict:
 @mcp_error_handler
 def clip_select(index: int) -> dict:
     return clip_select_impl(index=index)
+
+
+@mcp.tool(
+    description="クリップのプロパティを取得する。\n"
+    "AGENT RULES:\n- index はclip listで確認した値を使うこと"
+)
+@mcp_error_handler
+def clip_property_get(index: int, key: str) -> dict:
+    return clip_property_get_impl(index=index, key=key)
 
 
 @mcp.tool(
@@ -999,6 +1103,35 @@ def media_export_metadata(file_name: str, dry_run: bool = True) -> dict:
 @mcp_error_handler
 def media_transcribe(clip_name: str) -> dict:
     return media_transcribe_impl(clip_name=clip_name)
+
+
+@mcp.tool(
+    description="メディアプールのフォルダ一覧を返す。\n"
+    "AGENT RULES:\n- 引数不要。ルートフォルダ直下のサブフォルダを返す。"
+)
+@mcp_error_handler
+def media_folder_list() -> list[dict]:
+    return folder_list_impl()
+
+
+@mcp.tool(
+    description="メディアプールにフォルダを作成する。\n"
+    "AGENT RULES:\n- nameはフォルダ名"
+)
+@mcp_error_handler
+def media_folder_create(name: str) -> dict:
+    return folder_create_impl(name=name)
+
+
+@mcp.tool(
+    description="メディアプールのフォルダを削除する（破壊的操作）。\n"
+    "AGENT RULES:\n"
+    "- 必ずdry_run=Trueで事前確認し、ユーザーの明示的な承認を得てから実行\n"
+    "- フォルダ内のクリップも全て削除される"
+)
+@mcp_error_handler
+def media_folder_delete(name: str, dry_run: bool = True) -> dict:
+    return folder_delete_impl(name=name, dry_run=dry_run)
 
 
 # ---- deliver ----
