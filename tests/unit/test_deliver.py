@@ -42,6 +42,11 @@ def mock_resolve():
         }
     ]
     project.AddRenderJob.return_value = "job-002"
+    project.GetRenderJobStatus.return_value = {
+        "JobStatus": "Queued",
+        "CompletionPercentage": 0,
+        "EstimatedTimeRemainingInMs": 0,
+    }
     pm.GetCurrentProject.return_value = project
     resolve.GetProjectManager.return_value = pm
     return resolve
@@ -93,6 +98,21 @@ class TestDeliverJobImpl:
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = deliver_list_jobs_impl()
         assert len(result) == 1
+
+    def test_list_jobs_includes_real_status(self, mock_resolve):
+        project = mock_resolve.GetProjectManager().GetCurrentProject()
+        project.GetRenderJobList.return_value = [
+            {"JobId": "job-001", "TimelineName": "Edit"},
+        ]
+        project.GetRenderJobStatus.return_value = {
+            "JobStatus": "Rendering",
+            "CompletionPercentage": 42,
+        }
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = deliver_list_jobs_impl()
+        assert result[0]["status"] == "Rendering"
+        assert result[0]["progress"] == 42
+        project.GetRenderJobStatus.assert_called_once_with("job-001")
 
     def test_list_jobs_fields(self, mock_resolve):
         with patch(RESOLVE_PATCH, return_value=mock_resolve):

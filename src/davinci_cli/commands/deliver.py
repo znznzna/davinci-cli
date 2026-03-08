@@ -226,11 +226,13 @@ def deliver_list_jobs_impl(fields: list[str] | None = None) -> list[dict]:
     jobs = project.GetRenderJobList() or []
     result: list[dict] = []
     for job in jobs:
+        job_id = job.get("JobId", "")
+        status_info = project.GetRenderJobStatus(job_id) or {} if job_id else {}
         info = {
-            "job_id": job.get("JobId", ""),
+            "job_id": job_id,
             "timeline_name": job.get("TimelineName", ""),
-            "status": job.get("JobStatus", "Queued"),
-            "progress": job.get("CompletionPercentage"),
+            "status": status_info.get("JobStatus", "Unknown"),
+            "progress": status_info.get("CompletionPercentage"),
         }
         if fields:
             info = {k: v for k, v in info.items() if k in fields}
