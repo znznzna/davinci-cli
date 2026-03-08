@@ -14,7 +14,8 @@ All tool names use snake_case (e.g., system_ping, project_list, clip_list).
 1. **Verify connection:** Call `system_ping`. If it fails, DaVinci Resolve may not be running.
 2. **Get context:** Call `system_info` for version, edition, and current project.
 3. **List projects:** Call `project_list(fields="name")` to see available projects.
-4. **Open a project:** Call `project_open(name="...", dry_run=True)` first, then confirm with the user.
+4. **Open a project:** Call `project_open(name="...", dry_run=True)` first,
+   then confirm with the user.
 
 ## Safety Rules
 
