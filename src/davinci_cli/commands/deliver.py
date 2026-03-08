@@ -74,6 +74,37 @@ class DeliverStopOutput(BaseModel):
     stopped: bool
 
 
+class DeliverDeleteJobInput(BaseModel):
+    job_id: str
+
+
+class DeliverDeleteJobOutput(BaseModel):
+    deleted: bool | None = None
+    job_id: str
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class DeliverDeleteAllJobsOutput(BaseModel):
+    deleted_all: bool | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class DeliverJobStatusInput(BaseModel):
+    job_id: str
+
+
+class DeliverJobStatusOutput(BaseModel):
+    job_id: str
+    JobStatus: str | None = None
+    CompletionPercentage: float | None = None
+
+
+class DeliverIsRenderingOutput(BaseModel):
+    rendering: bool
+
+
 # --- Helper ---
 
 
@@ -213,6 +244,45 @@ def deliver_status_impl() -> dict:
     return {"jobs": statuses}
 
 
+def deliver_delete_job_impl(job_id: str, dry_run: bool = False) -> dict:
+    if dry_run:
+        return {"dry_run": True, "action": "delete_job", "job_id": job_id}
+    project = _get_current_project()
+    result = project.DeleteRenderJob(job_id)
+    if result is False:
+        raise ValidationError(
+            field="job_id", reason=f"Failed to delete render job: {job_id}"
+        )
+    return {"deleted": True, "job_id": job_id}
+
+
+def deliver_delete_all_jobs_impl(dry_run: bool = False) -> dict:
+    if dry_run:
+        return {"dry_run": True, "action": "delete_all_jobs"}
+    project = _get_current_project()
+    result = project.DeleteAllRenderJobs()
+    if result is False:
+        raise ValidationError(
+            field="jobs", reason="Failed to delete all render jobs"
+        )
+    return {"deleted_all": True}
+
+
+def deliver_job_status_impl(job_id: str) -> dict:
+    project = _get_current_project()
+    status = project.GetRenderJobStatus(job_id)
+    if not status:
+        raise ValidationError(
+            field="job_id", reason=f"No status for job: {job_id}"
+        )
+    return {"job_id": job_id, **status}
+
+
+def deliver_is_rendering_impl() -> dict:
+    project = _get_current_project()
+    return {"rendering": project.IsRenderingInProgress()}
+
+
 # --- CLI Commands ---
 
 
@@ -293,6 +363,42 @@ def status(ctx: click.Context) -> None:
     output(result, pretty=ctx.obj.get("pretty"))
 
 
+@deliver.command(name="delete-job")
+@click.argument("job_id")
+@dry_run_option
+@click.pass_context
+def delete_job(ctx: click.Context, job_id: str, dry_run: bool) -> None:
+    """レンダージョブ削除。"""
+    result = deliver_delete_job_impl(job_id=job_id, dry_run=dry_run)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@deliver.command(name="delete-all-jobs")
+@dry_run_option
+@click.pass_context
+def delete_all_jobs(ctx: click.Context, dry_run: bool) -> None:
+    """全レンダージョブ削除。"""
+    result = deliver_delete_all_jobs_impl(dry_run=dry_run)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@deliver.command(name="job-status")
+@click.argument("job_id")
+@click.pass_context
+def job_status(ctx: click.Context, job_id: str) -> None:
+    """レンダージョブのステータス確認。"""
+    result = deliver_job_status_impl(job_id=job_id)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@deliver.command(name="is-rendering")
+@click.pass_context
+def is_rendering(ctx: click.Context) -> None:
+    """レンダリング中かどうか確認。"""
+    result = deliver_is_rendering_impl()
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
 # --- Schema Registration ---
 
 register_schema("deliver.preset.list", output_model=PresetListOutput)
@@ -314,3 +420,15 @@ register_schema(
 )
 register_schema("deliver.stop", output_model=DeliverStopOutput)
 register_schema("deliver.status", output_model=DeliverStatusOutput)
+register_schema(
+    "deliver.delete-job",
+    output_model=DeliverDeleteJobOutput,
+    input_model=DeliverDeleteJobInput,
+)
+register_schema("deliver.delete-all-jobs", output_model=DeliverDeleteAllJobsOutput)
+register_schema(
+    "deliver.job-status",
+    output_model=DeliverJobStatusOutput,
+    input_model=DeliverJobStatusInput,
+)
+register_schema("deliver.is-rendering", output_model=DeliverIsRenderingOutput)
