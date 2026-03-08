@@ -5,6 +5,8 @@ import pytest
 from click.testing import CliRunner
 
 from davinci_cli.cli import dr
+from davinci_cli.commands import color as color_module
+from davinci_cli.commands import gallery as gallery_module
 from davinci_cli.commands.gallery import (
     gallery_album_create_impl,
     gallery_album_current_impl,
@@ -47,7 +49,9 @@ def mock_resolve():
 
     # Stills
     still1 = MagicMock(name="still1_obj")
+    still1.GetLabel.return_value = "Still 0"
     still2 = MagicMock(name="still2_obj")
+    still2.GetLabel.return_value = "Still 1"
     album1.GetStills.return_value = [still1, still2]
     album1.ExportStills.return_value = True
     album1.ImportStills.return_value = True
@@ -276,3 +280,35 @@ class TestGalleryCLI:
         assert data["dry_run"] is True
         assert data["action"] == "still_delete"
         assert data["still_indices"] == [0, 1]
+
+    def test_still_grab_dry_run_cli(self):
+        result = CliRunner().invoke(
+            dr, ["gallery", "still", "grab", "0", "--dry-run"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["dry_run"] is True
+        assert data["action"] == "still_grab"
+        assert data["clip_index"] == 0
+
+    def test_still_list_cli(self, mock_resolve):
+        with patch(
+            "davinci_cli.commands.color.get_resolve", return_value=mock_resolve
+        ):
+            result = CliRunner().invoke(dr, ["gallery", "still", "list"])
+        assert result.exit_code == 0
+        # NDJSON output: one line per still
+        lines = [json.loads(line) for line in result.output.strip().split("\n")]
+        assert len(lines) == 2
+        assert lines[0]["index"] == 0
+        assert lines[1]["index"] == 1
+
+
+class TestGalleryStillImplReuse:
+    """gallery.still.list / gallery.still.grab が color.py の impl を再利用していることを確認。"""
+
+    def test_still_list_impl_is_same(self):
+        assert gallery_module.still_list_impl is color_module.still_list_impl
+
+    def test_still_grab_impl_is_same(self):
+        assert gallery_module.still_grab_impl is color_module.still_grab_impl

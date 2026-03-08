@@ -6,6 +6,12 @@ from typing import Any
 import click
 from pydantic import BaseModel
 
+from davinci_cli.commands.color import (
+    StillGrabOutput,
+    StillInfo,
+    still_grab_impl,
+    still_list_impl,
+)
 from davinci_cli.core.connection import get_resolve
 from davinci_cli.core.exceptions import ProjectNotOpenError, ValidationError
 from davinci_cli.core.validation import validate_path
@@ -310,6 +316,26 @@ def still_delete_cmd(ctx: click.Context, still_indices: tuple[int, ...], dry_run
     output(result, pretty=ctx.obj.get("pretty"))
 
 
+@gallery_still.command(name="list")
+@click.pass_context
+def gallery_still_list_cmd(ctx: click.Context) -> None:
+    """スチル一覧。"""
+    result = still_list_impl()
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@gallery_still.command(name="grab")
+@click.argument("clip_index", type=int)
+@dry_run_option
+@click.pass_context
+def gallery_still_grab_cmd(
+    ctx: click.Context, clip_index: int, dry_run: bool
+) -> None:
+    """スチルを取得する。"""
+    result = still_grab_impl(clip_index=clip_index, dry_run=dry_run)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
 # --- Schema Registration ---
 
 register_schema("gallery.album.list", output_model=AlbumInfo)
@@ -335,3 +361,5 @@ register_schema(
     output_model=StillDeleteOutput,
     input_model=StillDeleteInput,
 )
+register_schema("gallery.still.list", output_model=StillInfo)
+register_schema("gallery.still.grab", output_model=StillGrabOutput)
