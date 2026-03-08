@@ -19,6 +19,7 @@ from davinci_cli.commands.deliver import (
     deliver_preset_list_impl,
     deliver_preset_load_impl,
     deliver_start_impl,
+    deliver_status_impl,
 )
 from davinci_cli.core.exceptions import ValidationError
 
@@ -183,6 +184,42 @@ class TestDeliverCLI:
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = CliRunner().invoke(dr, ["deliver", "preset", "list"])
         assert result.exit_code == 0
+
+
+class TestDeliverStatusImpl:
+    def test_status_calls_get_render_job_status_per_job(self, mock_resolve):
+        project = mock_resolve.GetProjectManager().GetCurrentProject()
+        project.GetRenderJobList.return_value = [
+            {"JobId": "job-001"},
+            {"JobId": "job-002"},
+        ]
+
+        def mock_job_status(job_id):
+            statuses = {
+                "job-001": {"JobStatus": "Complete", "CompletionPercentage": 100, "EstimatedTimeRemainingInMs": 0},
+                "job-002": {"JobStatus": "Rendering", "CompletionPercentage": 50, "EstimatedTimeRemainingInMs": 30000},
+            }
+            return statuses.get(job_id, {})
+
+        project.GetRenderJobStatus.side_effect = mock_job_status
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = deliver_status_impl()
+        assert len(result["jobs"]) == 2
+        assert result["jobs"][0]["job_id"] == "job-001"
+        assert result["jobs"][0]["status"] == "Complete"
+        assert result["jobs"][0]["percent"] == 100
+        assert result["jobs"][0]["eta"] == 0
+        assert result["jobs"][1]["status"] == "Rendering"
+        assert result["jobs"][1]["percent"] == 50
+        assert result["jobs"][1]["eta"] == 30
+        assert project.GetRenderJobStatus.call_count == 2
+
+    def test_status_empty_job_list(self, mock_resolve):
+        project = mock_resolve.GetProjectManager().GetCurrentProject()
+        project.GetRenderJobList.return_value = []
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = deliver_status_impl()
+        assert result == {"jobs": []}
 
 
 class TestDeliverFormatsImpl:

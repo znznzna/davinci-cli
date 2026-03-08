@@ -275,11 +275,15 @@ def deliver_status_impl() -> dict:
     jobs = project.GetRenderJobList() or []
     statuses: list[dict] = []
     for job in jobs:
+        job_id = job.get("JobId")
+        if not job_id:
+            continue
+        status_info = project.GetRenderJobStatus(job_id) or {}
         statuses.append({
-            "job_id": job.get("JobId"),
-            "status": job.get("JobStatus"),
-            "percent": job.get("CompletionPercentage", 0),
-            "eta": (job.get("EstimatedTimeRemainingInMs", 0) or 0) // 1000,
+            "job_id": job_id,
+            "status": status_info.get("JobStatus"),
+            "percent": status_info.get("CompletionPercentage", 0),
+            "eta": (status_info.get("EstimatedTimeRemainingInMs", 0) or 0) // 1000,
         })
     return {"jobs": statuses}
 
