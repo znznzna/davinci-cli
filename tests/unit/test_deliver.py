@@ -7,11 +7,15 @@ from click.testing import CliRunner
 from davinci_cli.cli import dr
 from davinci_cli.commands.deliver import (
     deliver_add_job_impl,
+    deliver_codec_list_impl,
     deliver_delete_all_jobs_impl,
     deliver_delete_job_impl,
+    deliver_format_list_impl,
     deliver_is_rendering_impl,
     deliver_job_status_impl,
     deliver_list_jobs_impl,
+    deliver_preset_export_impl,
+    deliver_preset_import_impl,
     deliver_preset_list_impl,
     deliver_preset_load_impl,
     deliver_start_impl,
@@ -170,3 +174,66 @@ class TestDeliverCLI:
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = CliRunner().invoke(dr, ["deliver", "preset", "list"])
         assert result.exit_code == 0
+
+
+class TestDeliverFormatsImpl:
+    def test_format_list(self, mock_resolve):
+        project = mock_resolve.GetProjectManager().GetCurrentProject()
+        project.GetRenderFormats.return_value = {
+            "QuickTime": ".mov",
+            "MP4": ".mp4",
+        }
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = deliver_format_list_impl()
+        assert result == {"formats": {"QuickTime": ".mov", "MP4": ".mp4"}}
+
+    def test_codec_list(self, mock_resolve):
+        project = mock_resolve.GetProjectManager().GetCurrentProject()
+        project.GetRenderCodecs.return_value = {
+            "Apple ProRes 422 HQ": "ap4h",
+        }
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = deliver_codec_list_impl(format_name="QuickTime")
+        assert result["format"] == "QuickTime"
+        assert result["codecs"] == {"Apple ProRes 422 HQ": "ap4h"}
+        project.GetRenderCodecs.assert_called_once_with("QuickTime")
+
+    def test_preset_import_dry_run(self, tmp_path):
+        preset_file = tmp_path / "my_preset.xml"
+        preset_file.write_text("<preset/>")
+        result = deliver_preset_import_impl(path=str(preset_file), dry_run=True)
+        assert result["dry_run"] is True
+        assert result["action"] == "preset_import"
+
+    def test_preset_import(self, mock_resolve, tmp_path):
+        preset_file = tmp_path / "my_preset.xml"
+        preset_file.write_text("<preset/>")
+        mock_resolve.ImportRenderPreset.return_value = True
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = deliver_preset_import_impl(path=str(preset_file))
+        assert result["imported"] is True
+        mock_resolve.ImportRenderPreset.assert_called_once_with(
+            str(preset_file.resolve())
+        )
+
+    def test_preset_import_file_not_found(self):
+        with pytest.raises(ValidationError, match="not found"):
+            deliver_preset_import_impl(path="/nonexistent/preset.xml")
+
+    def test_preset_export_dry_run(self, tmp_path):
+        export_path = str(tmp_path / "exported.xml")
+        result = deliver_preset_export_impl(
+            name="MyPreset", path=export_path, dry_run=True
+        )
+        assert result["dry_run"] is True
+        assert result["action"] == "preset_export"
+        assert result["name"] == "MyPreset"
+
+    def test_preset_export(self, mock_resolve, tmp_path):
+        export_path = str(tmp_path / "exported.xml")
+        mock_resolve.ExportRenderPreset.return_value = True
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = deliver_preset_export_impl(name="MyPreset", path=export_path)
+        assert result["exported"] is True
+        assert result["name"] == "MyPreset"
+        mock_resolve.ExportRenderPreset.assert_called_once()

@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from davinci_cli.core.connection import get_resolve
 from davinci_cli.core.exceptions import ProjectNotOpenError, ValidationError
+from davinci_cli.core.validation import validate_path
 from davinci_cli.decorators import dry_run_option, fields_option, json_input_option
 from davinci_cli.output.formatter import output
 from davinci_cli.schema_registry import register_schema
@@ -103,6 +104,45 @@ class DeliverJobStatusOutput(BaseModel):
 
 class DeliverIsRenderingOutput(BaseModel):
     rendering: bool
+
+
+class FormatListOutput(BaseModel):
+    formats: dict[str, str]
+
+
+class CodecListOutput(BaseModel):
+    format: str
+    codecs: dict[str, str]
+
+
+class CodecListInput(BaseModel):
+    format_name: str
+
+
+class PresetImportInput(BaseModel):
+    path: str
+    dry_run: bool = False
+
+
+class PresetImportOutput(BaseModel):
+    imported: bool | None = None
+    path: str | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class PresetExportInput(BaseModel):
+    name: str
+    path: str
+    dry_run: bool = False
+
+
+class PresetExportOutput(BaseModel):
+    exported: bool | None = None
+    name: str | None = None
+    path: str | None = None
+    dry_run: bool | None = None
+    action: str | None = None
 
 
 # --- Helper ---
@@ -283,6 +323,57 @@ def deliver_is_rendering_impl() -> dict:
     return {"rendering": project.IsRenderingInProgress()}
 
 
+def deliver_format_list_impl() -> dict:
+    """レンダーフォーマット一覧を返す。"""
+    project = _get_current_project()
+    formats = project.GetRenderFormats()
+    return {"formats": formats or {}}
+
+
+def deliver_codec_list_impl(format_name: str) -> dict:
+    """指定フォーマットのコーデック一覧を返す。"""
+    project = _get_current_project()
+    codecs = project.GetRenderCodecs(format_name)
+    return {"format": format_name, "codecs": codecs or {}}
+
+
+def deliver_preset_import_impl(path: str, dry_run: bool = False) -> dict:
+    """レンダープリセットをインポートする。"""
+    validated = validate_path(path)
+    if not validated.exists():
+        raise ValidationError(field="path", reason=f"Preset file not found: {path}")
+    if dry_run:
+        return {"dry_run": True, "action": "preset_import", "path": str(validated)}
+    resolve = get_resolve()
+    result = resolve.ImportRenderPreset(str(validated))
+    if result is False:
+        raise ValidationError(
+            field="path", reason=f"Failed to import preset: {path}"
+        )
+    return {"imported": True, "path": str(validated)}
+
+
+def deliver_preset_export_impl(
+    name: str, path: str, dry_run: bool = False
+) -> dict:
+    """レンダープリセットをエクスポートする。"""
+    validated = validate_path(path)
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "preset_export",
+            "name": name,
+            "path": str(validated),
+        }
+    resolve = get_resolve()
+    result = resolve.ExportRenderPreset(name, str(validated))
+    if result is False:
+        raise ValidationError(
+            field="name", reason=f"Failed to export preset: {name}"
+        )
+    return {"exported": True, "name": name, "path": str(validated)}
+
+
 # --- CLI Commands ---
 
 
@@ -399,6 +490,54 @@ def is_rendering(ctx: click.Context) -> None:
     output(result, pretty=ctx.obj.get("pretty"))
 
 
+@deliver.group(name="format")
+def deliver_format() -> None:
+    """Render format operations."""
+
+
+@deliver_format.command(name="list")
+@click.pass_context
+def format_list(ctx: click.Context) -> None:
+    """レンダーフォーマット一覧。"""
+    result = deliver_format_list_impl()
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@deliver.group(name="codec")
+def deliver_codec() -> None:
+    """Render codec operations."""
+
+
+@deliver_codec.command(name="list")
+@click.argument("format_name")
+@click.pass_context
+def codec_list(ctx: click.Context, format_name: str) -> None:
+    """指定フォーマットのコーデック一覧。"""
+    result = deliver_codec_list_impl(format_name=format_name)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@deliver_preset.command(name="import")
+@click.argument("path")
+@dry_run_option
+@click.pass_context
+def preset_import(ctx: click.Context, path: str, dry_run: bool) -> None:
+    """レンダープリセットをインポート。"""
+    result = deliver_preset_import_impl(path=path, dry_run=dry_run)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@deliver_preset.command(name="export")
+@click.argument("name")
+@click.argument("path")
+@dry_run_option
+@click.pass_context
+def preset_export(ctx: click.Context, name: str, path: str, dry_run: bool) -> None:
+    """レンダープリセットをエクスポート。"""
+    result = deliver_preset_export_impl(name=name, path=path, dry_run=dry_run)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
 # --- Schema Registration ---
 
 register_schema("deliver.preset.list", output_model=PresetListOutput)
@@ -432,3 +571,19 @@ register_schema(
     input_model=DeliverJobStatusInput,
 )
 register_schema("deliver.is-rendering", output_model=DeliverIsRenderingOutput)
+register_schema("deliver.format.list", output_model=FormatListOutput)
+register_schema(
+    "deliver.codec.list",
+    output_model=CodecListOutput,
+    input_model=CodecListInput,
+)
+register_schema(
+    "deliver.preset.import",
+    output_model=PresetImportOutput,
+    input_model=PresetImportInput,
+)
+register_schema(
+    "deliver.preset.export",
+    output_model=PresetExportOutput,
+    input_model=PresetExportInput,
+)
