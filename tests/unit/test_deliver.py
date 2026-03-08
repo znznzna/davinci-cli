@@ -148,8 +148,25 @@ class TestDeliverExtendedImpl:
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = deliver_job_status_impl(job_id="job-001")
         assert result["job_id"] == "job-001"
-        assert result["JobStatus"] == "Complete"
-        assert result["CompletionPercentage"] == 100
+        assert result["status"] == "Complete"
+        assert result["percent"] == 100
+
+    def test_job_status_normalized_keys(self, mock_resolve):
+        mock_resolve.GetProjectManager().GetCurrentProject().GetRenderJobStatus.return_value = {
+            "JobStatus": "Rendering",
+            "CompletionPercentage": 75,
+            "EstimatedTimeRemainingInMs": 60000,
+        }
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = deliver_job_status_impl(job_id="job-001")
+        assert result["job_id"] == "job-001"
+        assert result["status"] == "Rendering"
+        assert result["percent"] == 75
+        assert result["eta"] == 60
+        # PascalCase キーが存在しないことを確認
+        assert "JobStatus" not in result
+        assert "CompletionPercentage" not in result
+        assert "EstimatedTimeRemainingInMs" not in result
 
     def test_is_rendering(self, mock_resolve):
         project = mock_resolve.GetProjectManager().GetCurrentProject()

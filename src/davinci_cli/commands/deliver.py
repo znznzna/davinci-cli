@@ -98,8 +98,9 @@ class DeliverJobStatusInput(BaseModel):
 
 class DeliverJobStatusOutput(BaseModel):
     job_id: str
-    JobStatus: str | None = None
-    CompletionPercentage: float | None = None
+    status: str | None = None
+    percent: float | None = None
+    eta: int | None = None
 
 
 class DeliverIsRenderingOutput(BaseModel):
@@ -314,12 +315,17 @@ def deliver_delete_all_jobs_impl(dry_run: bool = False) -> dict:
 
 def deliver_job_status_impl(job_id: str) -> dict:
     project = _get_current_project()
-    status = project.GetRenderJobStatus(job_id)
-    if not status:
+    raw = project.GetRenderJobStatus(job_id)
+    if not raw:
         raise ValidationError(
             field="job_id", reason=f"No status for job: {job_id}"
         )
-    return {"job_id": job_id, **status}
+    return {
+        "job_id": job_id,
+        "status": raw.get("JobStatus"),
+        "percent": raw.get("CompletionPercentage", 0),
+        "eta": (raw.get("EstimatedTimeRemainingInMs", 0) or 0) // 1000,
+    }
 
 
 def deliver_is_rendering_impl() -> dict:
