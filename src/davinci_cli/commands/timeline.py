@@ -191,6 +191,25 @@ class CurrentItemOutput(BaseModel):
     name: str | None = None
 
 
+class TimelineDuplicateOutput(BaseModel):
+    duplicated: bool | None = None
+    name: str | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class TimelineDuplicateInput(BaseModel):
+    name: str | None = None
+
+
+class TimelineDetectSceneCutsOutput(BaseModel):
+    detected: bool
+
+
+class TimelineCreateSubtitlesOutput(BaseModel):
+    created: bool
+
+
 # --- Helper ---
 
 
@@ -538,6 +557,28 @@ def current_item_impl() -> dict:
     return {"name": item.GetName()}
 
 
+def timeline_duplicate_impl(name: str | None = None, dry_run: bool = False) -> dict:
+    if dry_run:
+        return {"dry_run": True, "action": "duplicate", "name": name}
+    tl = _get_current_timeline()
+    new_tl = tl.DuplicateTimeline(name) if name else tl.DuplicateTimeline()
+    if not new_tl:
+        raise ValidationError(field="name", reason="Failed to duplicate timeline")
+    return {"duplicated": True, "name": new_tl.GetName()}
+
+
+def timeline_detect_scene_cuts_impl() -> dict:
+    tl = _get_current_timeline()
+    result = tl.DetectSceneCuts()
+    return {"detected": bool(result)}
+
+
+def timeline_create_subtitles_impl() -> dict:
+    tl = _get_current_timeline()
+    result = tl.CreateSubtitlesFromAudio()
+    return {"created": bool(result)}
+
+
 # --- CLI Commands ---
 
 
@@ -659,6 +700,41 @@ def timecode_set_cmd(ctx: click.Context, timecode: str, dry_run: bool) -> None:
 def current_item_cmd(ctx: click.Context) -> None:
     """現在のビデオアイテム取得。"""
     result = current_item_impl()
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@timeline.command(name="duplicate")
+@click.option("--name", default=None, help="Name for the duplicated timeline")
+@json_input_option
+@dry_run_option
+@click.pass_context
+def timeline_duplicate_cmd(
+    ctx: click.Context,
+    name: str | None,
+    json_input: dict | None,
+    dry_run: bool,
+) -> None:
+    """タイムライン複製。"""
+    if json_input:
+        data = TimelineDuplicateInput.model_validate(json_input)
+        name = data.name
+    result = timeline_duplicate_impl(name=name, dry_run=dry_run)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@timeline.command(name="detect-scene-cuts")
+@click.pass_context
+def timeline_detect_scene_cuts_cmd(ctx: click.Context) -> None:
+    """シーンカット検出。"""
+    result = timeline_detect_scene_cuts_impl()
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@timeline.command(name="create-subtitles")
+@click.pass_context
+def timeline_create_subtitles_cmd(ctx: click.Context) -> None:
+    """音声から字幕生成。"""
+    result = timeline_create_subtitles_impl()
     output(result, pretty=ctx.obj.get("pretty"))
 
 
@@ -863,6 +939,13 @@ register_schema(
     input_model=TimecodeSetInput,
 )
 register_schema("timeline.current-item", output_model=CurrentItemOutput)
+register_schema(
+    "timeline.duplicate",
+    output_model=TimelineDuplicateOutput,
+    input_model=TimelineDuplicateInput,
+)
+register_schema("timeline.detect-scene-cuts", output_model=TimelineDetectSceneCutsOutput)
+register_schema("timeline.create-subtitles", output_model=TimelineCreateSubtitlesOutput)
 register_schema("timeline.track.list", output_model=TrackListItem)
 register_schema(
     "timeline.track.add",

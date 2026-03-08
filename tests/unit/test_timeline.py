@@ -13,8 +13,11 @@ from davinci_cli.commands.timeline import (
     timecode_get_impl,
     timecode_set_impl,
     timeline_create_impl,
+    timeline_create_subtitles_impl,
     timeline_current_impl,
     timeline_delete_impl,
+    timeline_detect_scene_cuts_impl,
+    timeline_duplicate_impl,
     timeline_export_impl,
     timeline_list_impl,
     timeline_switch_impl,
@@ -336,6 +339,69 @@ class TestTrackEnableLockImpl:
     def test_track_lock_invalid_type(self):
         with pytest.raises(ValidationError):
             track_lock_impl("invalid", 1)
+
+
+class TestTimelineExtendedImpl:
+    def test_duplicate_dry_run(self):
+        result = timeline_duplicate_impl("copy", dry_run=True)
+        assert result == {"dry_run": True, "action": "duplicate", "name": "copy"}
+
+    def test_duplicate(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        new_tl = MagicMock()
+        new_tl.GetName.return_value = "copy"
+        timeline.DuplicateTimeline.return_value = new_tl
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = timeline_duplicate_impl("copy")
+        assert result == {"duplicated": True, "name": "copy"}
+        timeline.DuplicateTimeline.assert_called_once_with("copy")
+
+    def test_duplicate_no_name(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        new_tl = MagicMock()
+        new_tl.GetName.return_value = "Main Edit copy"
+        timeline.DuplicateTimeline.return_value = new_tl
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = timeline_duplicate_impl()
+        assert result == {"duplicated": True, "name": "Main Edit copy"}
+        timeline.DuplicateTimeline.assert_called_once_with()
+
+    def test_duplicate_failure(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.DuplicateTimeline.return_value = None
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError),
+        ):
+            timeline_duplicate_impl("copy")
+
+    def test_detect_scene_cuts(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.DetectSceneCuts.return_value = True
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = timeline_detect_scene_cuts_impl()
+        assert result == {"detected": True}
+
+    def test_detect_scene_cuts_false(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.DetectSceneCuts.return_value = False
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = timeline_detect_scene_cuts_impl()
+        assert result == {"detected": False}
+
+    def test_create_subtitles(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.CreateSubtitlesFromAudio.return_value = True
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = timeline_create_subtitles_impl()
+        assert result == {"created": True}
+
+    def test_create_subtitles_false(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.CreateSubtitlesFromAudio.return_value = False
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = timeline_create_subtitles_impl()
+        assert result == {"created": False}
 
 
 class TestTimelineCLI:
