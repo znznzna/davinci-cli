@@ -145,6 +145,47 @@ class VersionRenameOutput(BaseModel):
     action: str | None = None
 
 
+class NodeLutSetInput(BaseModel):
+    clip_index: int
+    node_index: int
+    lut_path: str
+
+
+class NodeLutSetOutput(BaseModel):
+    set: bool | None = None
+    clip_index: int
+    node_index: int
+    lut_path: str | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class NodeLutGetInput(BaseModel):
+    clip_index: int
+    node_index: int
+
+
+class NodeLutGetOutput(BaseModel):
+    lut_path: str | None = None
+    clip_index: int
+    node_index: int
+
+
+class NodeEnableInput(BaseModel):
+    clip_index: int
+    node_index: int
+    enabled: bool
+
+
+class NodeEnableOutput(BaseModel):
+    set: bool | None = None
+    clip_index: int
+    node_index: int
+    enabled: bool | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+
 # --- Helper ---
 
 
@@ -173,6 +214,16 @@ def _get_current_timeline() -> Any:
     if not tl:
         raise ProjectNotOpenError()
     return tl
+
+
+def _get_node_graph(tl: Any, clip_index: int) -> Any:
+    clip_item = _get_clip_item_by_index(tl, clip_index)
+    graph = clip_item.GetNodeGraph()
+    if not graph:
+        raise ValidationError(
+            field="graph", reason="Failed to get node graph for clip"
+        )
+    return graph
 
 
 # --- _impl Functions ---
@@ -423,6 +474,83 @@ def still_list_impl() -> list[dict]:
     return result
 
 
+def node_lut_set_impl(
+    clip_index: int,
+    node_index: int,
+    lut_path: str,
+    dry_run: bool = False,
+) -> dict:
+    validated = validate_path(lut_path, allowed_extensions=_LUT_EXTENSIONS)
+    if not validated.exists():
+        raise ValidationError(
+            field="lut_path",
+            reason=f"LUT file not found: {lut_path}",
+        )
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "node_lut_set",
+            "clip_index": clip_index,
+            "node_index": node_index,
+            "lut_path": str(validated),
+        }
+    tl = _get_current_timeline()
+    graph = _get_node_graph(tl, clip_index)
+    result = graph.SetLUT(node_index, str(validated))
+    if result is False:
+        raise ValidationError(
+            field="lut_path",
+            reason=f"Failed to set LUT on node {node_index}",
+        )
+    return {
+        "set": True,
+        "clip_index": clip_index,
+        "node_index": node_index,
+        "lut_path": str(validated),
+    }
+
+
+def node_lut_get_impl(clip_index: int, node_index: int) -> dict:
+    tl = _get_current_timeline()
+    graph = _get_node_graph(tl, clip_index)
+    lut_path = graph.GetLUT(node_index)
+    return {
+        "lut_path": lut_path or None,
+        "clip_index": clip_index,
+        "node_index": node_index,
+    }
+
+
+def node_enable_impl(
+    clip_index: int,
+    node_index: int,
+    enabled: bool,
+    dry_run: bool = False,
+) -> dict:
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "node_enable",
+            "clip_index": clip_index,
+            "node_index": node_index,
+            "enabled": enabled,
+        }
+    tl = _get_current_timeline()
+    graph = _get_node_graph(tl, clip_index)
+    result = graph.SetNodeEnabled(node_index, enabled)
+    if result is False:
+        raise ValidationError(
+            field="node_index",
+            reason=f"Failed to set node {node_index} enabled={enabled}",
+        )
+    return {
+        "set": True,
+        "clip_index": clip_index,
+        "node_index": node_index,
+        "enabled": enabled,
+    }
+
+
 # --- CLI Commands ---
 
 
@@ -484,6 +612,69 @@ def color_node() -> None:
 def node_list_cmd(ctx: click.Context, clip_index: int) -> None:
     """ノード一覧。"""
     result = node_list_impl(clip_index=clip_index)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@color_node.group(name="lut")
+def node_lut() -> None:
+    """Node LUT operations."""
+
+
+@node_lut.command(name="set")
+@click.argument("clip_index", type=int)
+@click.argument("node_index", type=int)
+@click.argument("lut_path")
+@dry_run_option
+@click.pass_context
+def node_lut_set_cmd(
+    ctx: click.Context,
+    clip_index: int,
+    node_index: int,
+    lut_path: str,
+    dry_run: bool,
+) -> None:
+    """ノードに LUT を設定する。"""
+    result = node_lut_set_impl(
+        clip_index=clip_index,
+        node_index=node_index,
+        lut_path=lut_path,
+        dry_run=dry_run,
+    )
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@node_lut.command(name="get")
+@click.argument("clip_index", type=int)
+@click.argument("node_index", type=int)
+@click.pass_context
+def node_lut_get_cmd(
+    ctx: click.Context, clip_index: int, node_index: int
+) -> None:
+    """ノードの LUT を取得する。"""
+    result = node_lut_get_impl(clip_index=clip_index, node_index=node_index)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@color_node.command(name="enable")
+@click.argument("clip_index", type=int)
+@click.argument("node_index", type=int)
+@click.argument("enabled", type=bool)
+@dry_run_option
+@click.pass_context
+def node_enable_cmd(
+    ctx: click.Context,
+    clip_index: int,
+    node_index: int,
+    enabled: bool,
+    dry_run: bool,
+) -> None:
+    """ノードの有効/無効を切り替える。"""
+    result = node_enable_impl(
+        clip_index=clip_index,
+        node_index=node_index,
+        enabled=enabled,
+        dry_run=dry_run,
+    )
     output(result, pretty=ctx.obj.get("pretty"))
 
 
@@ -672,4 +863,19 @@ register_schema(
     "color.version.rename",
     output_model=VersionRenameOutput,
     input_model=VersionRenameInput,
+)
+register_schema(
+    "color.node.lut.set",
+    output_model=NodeLutSetOutput,
+    input_model=NodeLutSetInput,
+)
+register_schema(
+    "color.node.lut.get",
+    output_model=NodeLutGetOutput,
+    input_model=NodeLutGetInput,
+)
+register_schema(
+    "color.node.enable",
+    output_model=NodeEnableOutput,
+    input_model=NodeEnableInput,
 )

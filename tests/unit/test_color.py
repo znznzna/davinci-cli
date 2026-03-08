@@ -15,7 +15,10 @@ from davinci_cli.commands.color import (
     color_version_list_impl,
     color_version_load_impl,
     color_version_rename_impl,
+    node_enable_impl,
     node_list_impl,
+    node_lut_get_impl,
+    node_lut_set_impl,
     still_grab_impl,
     still_list_impl,
 )
@@ -347,6 +350,72 @@ class TestColorVersionMutateImpl:
             color_version_rename_impl(
                 clip_index=0, old_name="V1", new_name="V2", version_type=0
             )
+
+
+class TestGraphOperationsImpl:
+    @pytest.fixture
+    def mock_resolve_with_graph(self, mock_resolve):
+        graph = MagicMock()
+        graph.SetLUT.return_value = True
+        graph.GetLUT.return_value = "rec709.cube"
+        graph.SetNodeEnabled.return_value = True
+
+        clip = MagicMock()
+        clip.GetNodeGraph.return_value = graph
+        pm = mock_resolve.GetProjectManager()
+        tl = pm.GetCurrentProject().GetCurrentTimeline()
+        tl.GetItemListInTrack.return_value = [clip]
+        return mock_resolve, graph
+
+    def test_node_lut_set_dry_run(self, tmp_path):
+        lut = tmp_path / "test.cube"
+        lut.touch()
+        result = node_lut_set_impl(
+            clip_index=0, node_index=1, lut_path=str(lut), dry_run=True
+        )
+        assert result["dry_run"] is True
+        assert result["action"] == "node_lut_set"
+        assert result["clip_index"] == 0
+        assert result["node_index"] == 1
+
+    def test_node_lut_set(self, mock_resolve_with_graph, tmp_path):
+        mock_resolve, graph = mock_resolve_with_graph
+        lut = tmp_path / "rec709.cube"
+        lut.touch()
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = node_lut_set_impl(
+                clip_index=0, node_index=1, lut_path=str(lut)
+            )
+        graph.SetLUT.assert_called_once_with(1, str(lut))
+        assert result["set"] is True
+        assert result["node_index"] == 1
+        assert result["lut_path"] == str(lut)
+
+    def test_node_lut_get(self, mock_resolve_with_graph):
+        mock_resolve, graph = mock_resolve_with_graph
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = node_lut_get_impl(clip_index=0, node_index=1)
+        graph.GetLUT.assert_called_once_with(1)
+        assert result["lut_path"] == "rec709.cube"
+        assert result["node_index"] == 1
+
+    def test_node_enable_dry_run(self):
+        result = node_enable_impl(
+            clip_index=0, node_index=1, enabled=True, dry_run=True
+        )
+        assert result["dry_run"] is True
+        assert result["action"] == "node_enable"
+        assert result["node_index"] == 1
+        assert result["enabled"] is True
+
+    def test_node_enable(self, mock_resolve_with_graph):
+        mock_resolve, graph = mock_resolve_with_graph
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = node_enable_impl(clip_index=0, node_index=1, enabled=True)
+        graph.SetNodeEnabled.assert_called_once_with(1, True)
+        assert result["set"] is True
+        assert result["node_index"] == 1
+        assert result["enabled"] is True
 
 
 class TestColorCLI:
