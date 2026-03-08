@@ -6,6 +6,13 @@ from click.testing import CliRunner
 
 from davinci_cli.cli import dr
 from davinci_cli.commands.clip import (
+    clip_color_clear_impl,
+    clip_color_get_impl,
+    clip_color_set_impl,
+    clip_enable_impl,
+    clip_flag_add_impl,
+    clip_flag_clear_impl,
+    clip_flag_list_impl,
     clip_info_impl,
     clip_list_impl,
     clip_property_get_impl,
@@ -100,6 +107,105 @@ class TestClipPropertyImpl:
         )
         assert result["dry_run"] is True
         assert result["key"] == "Pan"
+
+
+class TestClipAttributesImpl:
+    def test_clip_enable_get(self, mock_resolve):
+        clip1 = (
+            mock_resolve.GetProjectManager()
+            .GetCurrentProject()
+            .GetCurrentTimeline()
+            .GetItemListInTrack.return_value[0]
+        )
+        clip1.GetClipEnabled.return_value = True
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = clip_enable_impl(index=0)
+        assert result == {"enabled": True, "clip_index": 0}
+
+    def test_clip_enable_set(self, mock_resolve):
+        clip1 = (
+            mock_resolve.GetProjectManager()
+            .GetCurrentProject()
+            .GetCurrentTimeline()
+            .GetItemListInTrack.return_value[0]
+        )
+        clip1.SetClipEnabled.return_value = True
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = clip_enable_impl(index=0, enabled=False)
+        assert result == {"set": True, "enabled": False, "clip_index": 0}
+        clip1.SetClipEnabled.assert_called_once_with(False)
+
+    def test_clip_color_set(self, mock_resolve):
+        clip1 = (
+            mock_resolve.GetProjectManager()
+            .GetCurrentProject()
+            .GetCurrentTimeline()
+            .GetItemListInTrack.return_value[0]
+        )
+        clip1.SetClipColor.return_value = True
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = clip_color_set_impl(index=0, color="Orange")
+        assert result == {"set": True, "color": "Orange", "clip_index": 0}
+
+    def test_clip_color_get(self, mock_resolve):
+        clip1 = (
+            mock_resolve.GetProjectManager()
+            .GetCurrentProject()
+            .GetCurrentTimeline()
+            .GetItemListInTrack.return_value[0]
+        )
+        clip1.GetClipColor.return_value = "Orange"
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = clip_color_get_impl(index=0)
+        assert result == {"color": "Orange", "clip_index": 0}
+
+    def test_clip_color_clear(self, mock_resolve):
+        clip1 = (
+            mock_resolve.GetProjectManager()
+            .GetCurrentProject()
+            .GetCurrentTimeline()
+            .GetItemListInTrack.return_value[0]
+        )
+        clip1.ClearClipColor.return_value = True
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = clip_color_clear_impl(index=0)
+        assert result == {"cleared": True, "clip_index": 0}
+
+    def test_clip_flag_add(self, mock_resolve):
+        clip1 = (
+            mock_resolve.GetProjectManager()
+            .GetCurrentProject()
+            .GetCurrentTimeline()
+            .GetItemListInTrack.return_value[0]
+        )
+        clip1.AddFlag.return_value = True
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = clip_flag_add_impl(index=0, color="Blue")
+        assert result == {"added": True, "color": "Blue", "clip_index": 0}
+
+    def test_clip_flag_list(self, mock_resolve):
+        clip1 = (
+            mock_resolve.GetProjectManager()
+            .GetCurrentProject()
+            .GetCurrentTimeline()
+            .GetItemListInTrack.return_value[0]
+        )
+        clip1.GetFlagList.return_value = ["Blue", "Red"]
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = clip_flag_list_impl(index=0)
+        assert result == ["Blue", "Red"]
+
+    def test_clip_flag_clear(self, mock_resolve):
+        clip1 = (
+            mock_resolve.GetProjectManager()
+            .GetCurrentProject()
+            .GetCurrentTimeline()
+            .GetItemListInTrack.return_value[0]
+        )
+        clip1.ClearFlags.return_value = True
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = clip_flag_clear_impl(index=0, color="Blue")
+        assert result == {"cleared": True, "color": "Blue", "clip_index": 0}
 
 
 class TestClipCLI:

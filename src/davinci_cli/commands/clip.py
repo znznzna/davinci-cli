@@ -55,6 +55,26 @@ class ClipPropertySetInput(BaseModel):
     value: str
 
 
+class ClipEnableOutput(BaseModel):
+    enabled: bool
+    clip_index: int
+    set: bool | None = None
+
+
+class ClipColorOutput(BaseModel):
+    color: str | None = None
+    clip_index: int | None = None
+    set: bool | None = None
+    cleared: bool | None = None
+
+
+class ClipFlagOutput(BaseModel):
+    added: bool | None = None
+    cleared: bool | None = None
+    color: str | None = None
+    clip_index: int | None = None
+
+
 # --- Helper ---
 
 
@@ -89,6 +109,17 @@ def _collect_clips(tl: Any) -> list[tuple[dict, Any]]:
                 }
                 clips.append((info, clip_item))
     return clips
+
+
+def _get_clip_item_by_index(tl: Any, index: int) -> Any:
+    """インデックスでクリップアイテムを取得する。"""
+    clips = _collect_clips(tl)
+    if index < 0 or index >= len(clips):
+        raise ValidationError(
+            field="index",
+            reason=f"Clip index {index} out of range (0..{len(clips) - 1})",
+        )
+    return clips[index][1]
 
 
 # --- _impl Functions ---
@@ -195,6 +226,72 @@ def clip_property_set_impl(
     return {"set": True, "index": index, "key": key, "value": value}
 
 
+def clip_enable_impl(index: int, enabled: bool | None = None) -> dict:
+    """Get/set clip enabled. enabled=None means get."""
+    tl = _get_current_timeline()
+    clip_item = _get_clip_item_by_index(tl, index)
+    if enabled is None:
+        return {"enabled": clip_item.GetClipEnabled(), "clip_index": index}
+    result = clip_item.SetClipEnabled(enabled)
+    if result is False:
+        raise ValidationError(field="enabled", reason="Failed to set clip enabled")
+    return {"set": True, "enabled": enabled, "clip_index": index}
+
+
+def clip_color_set_impl(index: int, color: str) -> dict:
+    tl = _get_current_timeline()
+    clip_item = _get_clip_item_by_index(tl, index)
+    result = clip_item.SetClipColor(color)
+    if result is False:
+        raise ValidationError(
+            field="color", reason=f"Failed to set clip color: {color}"
+        )
+    return {"set": True, "color": color, "clip_index": index}
+
+
+def clip_color_get_impl(index: int) -> dict:
+    tl = _get_current_timeline()
+    clip_item = _get_clip_item_by_index(tl, index)
+    return {"color": clip_item.GetClipColor(), "clip_index": index}
+
+
+def clip_color_clear_impl(index: int) -> dict:
+    tl = _get_current_timeline()
+    clip_item = _get_clip_item_by_index(tl, index)
+    result = clip_item.ClearClipColor()
+    if result is False:
+        raise ValidationError(field="color", reason="Failed to clear clip color")
+    return {"cleared": True, "clip_index": index}
+
+
+def clip_flag_add_impl(index: int, color: str) -> dict:
+    tl = _get_current_timeline()
+    clip_item = _get_clip_item_by_index(tl, index)
+    result = clip_item.AddFlag(color)
+    if result is False:
+        raise ValidationError(
+            field="color", reason=f"Failed to add flag: {color}"
+        )
+    return {"added": True, "color": color, "clip_index": index}
+
+
+def clip_flag_list_impl(index: int) -> list:
+    tl = _get_current_timeline()
+    clip_item = _get_clip_item_by_index(tl, index)
+    return clip_item.GetFlagList() or []
+
+
+def clip_flag_clear_impl(index: int, color: str = "All") -> dict:
+    tl = _get_current_timeline()
+    clip_item = _get_clip_item_by_index(tl, index)
+    result = clip_item.ClearFlags(color)
+    if result is False:
+        raise ValidationError(
+            field="color", reason=f"Failed to clear flags: {color}"
+        )
+    return {"cleared": True, "color": color, "clip_index": index}
+
+
 # --- CLI Commands ---
 
 
@@ -275,6 +372,83 @@ def property_set(
     output(result, pretty=ctx.obj.get("pretty"))
 
 
+@clip.command(name="enable")
+@click.argument("index", type=int)
+@click.option("--value", type=bool, default=None, help="Set enabled state (omit to get)")
+@click.pass_context
+def clip_enable(ctx: click.Context, index: int, value: bool | None) -> None:
+    """クリップ有効/無効の取得・設定。"""
+    result = clip_enable_impl(index=index, enabled=value)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@clip.group(name="color")
+def clip_color() -> None:
+    """Clip color operations."""
+
+
+@clip_color.command(name="get")
+@click.argument("index", type=int)
+@click.pass_context
+def color_get(ctx: click.Context, index: int) -> None:
+    """クリップカラー取得。"""
+    result = clip_color_get_impl(index=index)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@clip_color.command(name="set")
+@click.argument("index", type=int)
+@click.argument("color")
+@click.pass_context
+def color_set(ctx: click.Context, index: int, color: str) -> None:
+    """クリップカラー設定。"""
+    result = clip_color_set_impl(index=index, color=color)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@clip_color.command(name="clear")
+@click.argument("index", type=int)
+@click.pass_context
+def color_clear(ctx: click.Context, index: int) -> None:
+    """クリップカラークリア。"""
+    result = clip_color_clear_impl(index=index)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@clip.group(name="flag")
+def clip_flag() -> None:
+    """Clip flag operations."""
+
+
+@clip_flag.command(name="add")
+@click.argument("index", type=int)
+@click.argument("color")
+@click.pass_context
+def flag_add(ctx: click.Context, index: int, color: str) -> None:
+    """フラグ追加。"""
+    result = clip_flag_add_impl(index=index, color=color)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@clip_flag.command(name="list")
+@click.argument("index", type=int)
+@click.pass_context
+def flag_list(ctx: click.Context, index: int) -> None:
+    """フラグ一覧。"""
+    result = clip_flag_list_impl(index=index)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@clip_flag.command(name="clear")
+@click.argument("index", type=int)
+@click.option("--color", default="All", help="Flag color to clear (default: All)")
+@click.pass_context
+def flag_clear(ctx: click.Context, index: int, color: str) -> None:
+    """フラグクリア。"""
+    result = clip_flag_clear_impl(index=index, color=color)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
 # --- Schema Registration ---
 
 register_schema("clip.list", output_model=ClipInfo)
@@ -286,3 +460,10 @@ register_schema(
     output_model=ClipPropertySetOutput,
     input_model=ClipPropertySetInput,
 )
+register_schema("clip.enable", output_model=ClipEnableOutput)
+register_schema("clip.color.get", output_model=ClipColorOutput)
+register_schema("clip.color.set", output_model=ClipColorOutput)
+register_schema("clip.color.clear", output_model=ClipColorOutput)
+register_schema("clip.flag.add", output_model=ClipFlagOutput)
+register_schema("clip.flag.list", output_model=ClipFlagOutput)
+register_schema("clip.flag.clear", output_model=ClipFlagOutput)
