@@ -107,6 +107,10 @@ class MarkerAddInput(BaseModel):
     duration: int = 1
 
 
+class MarkerDeleteInput(BaseModel):
+    frame_id: int
+
+
 class MarkerDeleteOutput(BaseModel):
     deleted: bool | None = None
     frame_id: int | None = None
@@ -890,13 +894,21 @@ def marker_add_cmd(
 
 
 @timeline_marker.command(name="delete")
-@click.argument("frame_id", type=int)
+@click.argument("frame_id", required=False, type=int)
+@json_input_option
 @dry_run_option
 @click.pass_context
 def marker_delete_cmd(
-    ctx: click.Context, frame_id: int, dry_run: bool
+    ctx: click.Context, frame_id: int | None, json_input: dict | None, dry_run: bool
 ) -> None:
     """マーカー削除。"""
+    if json_input:
+        data = MarkerDeleteInput.model_validate(json_input)
+        frame_id = data.frame_id
+    if frame_id is None:
+        raise click.UsageError(
+            "FRAME_ID is required (positional argument or --json)"
+        )
     result = marker_delete_impl(frame_id=frame_id, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
 
@@ -931,7 +943,11 @@ register_schema(
     output_model=MarkerAddOutput,
     input_model=MarkerAddInput,
 )
-register_schema("timeline.marker.delete", output_model=MarkerDeleteOutput)
+register_schema(
+    "timeline.marker.delete",
+    output_model=MarkerDeleteOutput,
+    input_model=MarkerDeleteInput,
+)
 register_schema("timeline.timecode.get", output_model=TimecodeGetOutput)
 register_schema(
     "timeline.timecode.set",

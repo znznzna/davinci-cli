@@ -418,3 +418,28 @@ class TestTimelineCLI:
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
+
+    def test_marker_delete_json_input(self):
+        result = CliRunner().invoke(
+            dr,
+            ["timeline", "marker", "delete", "--json", '{"frame_id": 100}', "--dry-run"],
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["dry_run"] is True
+        assert data["frame_id"] == 100
+
+    def test_marker_delete_positional_still_works(self):
+        result = CliRunner().invoke(
+            dr, ["timeline", "marker", "delete", "100", "--dry-run"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["dry_run"] is True
+        assert data["frame_id"] == 100
+
+    def test_marker_delete_no_arg_error(self):
+        result = CliRunner().invoke(
+            dr, ["timeline", "marker", "delete"]
+        )
+        assert result.exit_code != 0
