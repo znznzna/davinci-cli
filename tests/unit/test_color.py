@@ -9,6 +9,9 @@ from davinci_cli.commands.color import (
     color_apply_lut_impl,
     color_copy_grade_impl,
     color_reset_impl,
+    color_version_add_impl,
+    color_version_current_impl,
+    color_version_list_impl,
     node_list_impl,
     still_grab_impl,
     still_list_impl,
@@ -143,6 +146,75 @@ class TestStillImpl:
 
 
 
+class TestColorVersionImpl:
+    def test_version_list(self, mock_resolve):
+        clip = MagicMock()
+        clip.GetVersionNameList.return_value = ["Version 1", "Version 2"]
+        pm = mock_resolve.GetProjectManager()
+        tl = pm.GetCurrentProject().GetCurrentTimeline()
+        tl.GetItemListInTrack.return_value = [clip]
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = color_version_list_impl(clip_index=0)
+        clip.GetVersionNameList.assert_called_once_with(0)
+        assert result == [
+            {"name": "Version 1", "version_type": 0},
+            {"name": "Version 2", "version_type": 0},
+        ]
+
+    def test_version_current(self, mock_resolve):
+        clip = MagicMock()
+        clip.GetCurrentVersion.return_value = {"versionName": "V1", "versionType": 0}
+        pm = mock_resolve.GetProjectManager()
+        tl = pm.GetCurrentProject().GetCurrentTimeline()
+        tl.GetItemListInTrack.return_value = [clip]
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = color_version_current_impl(clip_index=0)
+        assert result == {"versionName": "V1", "versionType": 0}
+
+    def test_version_add_dry_run(self):
+        result = color_version_add_impl(
+            clip_index=0, name="V2", version_type=0, dry_run=True
+        )
+        assert result == {
+            "dry_run": True,
+            "action": "version_add",
+            "name": "V2",
+            "version_type": 0,
+            "clip_index": 0,
+        }
+
+    def test_version_add(self, mock_resolve):
+        clip = MagicMock()
+        clip.AddVersion.return_value = True
+        pm = mock_resolve.GetProjectManager()
+        tl = pm.GetCurrentProject().GetCurrentTimeline()
+        tl.GetItemListInTrack.return_value = [clip]
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = color_version_add_impl(clip_index=0, name="V2", version_type=0)
+        clip.AddVersion.assert_called_once_with("V2", 0)
+        assert result == {
+            "added": True,
+            "name": "V2",
+            "version_type": 0,
+            "clip_index": 0,
+        }
+
+    def test_version_add_failure(self, mock_resolve):
+        clip = MagicMock()
+        clip.AddVersion.return_value = False
+        pm = mock_resolve.GetProjectManager()
+        tl = pm.GetCurrentProject().GetCurrentTimeline()
+        tl.GetItemListInTrack.return_value = [clip]
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
+            ValidationError, match="Failed to add version"
+        ):
+            color_version_add_impl(clip_index=0, name="V2", version_type=0)
+
+
 class TestColorCLI:
     def test_apply_lut_dry_run(self, tmp_path):
         lut_file = tmp_path / "test.cube"
@@ -153,6 +225,16 @@ class TestColorCLI:
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
+
+    def test_version_add_dry_run_cli(self):
+        result = CliRunner().invoke(
+            dr, ["color", "version", "add", "0", "V2", "--dry-run"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["dry_run"] is True
+        assert data["action"] == "version_add"
+        assert data["name"] == "V2"
 
     def test_reset_dry_run(self):
         result = CliRunner().invoke(dr, ["color", "reset", "0", "--dry-run"])

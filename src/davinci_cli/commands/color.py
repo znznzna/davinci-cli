@@ -68,6 +68,36 @@ class StillGrabOutput(BaseModel):
     action: str | None = None
 
 
+class VersionListInput(BaseModel):
+    clip_index: int
+    version_type: int = 0
+
+
+class VersionListOutput(BaseModel):
+    name: str
+    version_type: int
+
+
+class VersionCurrentOutput(BaseModel):
+    versionName: str
+    versionType: int
+
+
+class VersionAddInput(BaseModel):
+    clip_index: int
+    name: str
+    version_type: int = 0
+
+
+class VersionAddOutput(BaseModel):
+    added: bool | None = None
+    name: str
+    version_type: int
+    clip_index: int
+    dry_run: bool | None = None
+    action: str | None = None
+
+
 # --- Helper ---
 
 
@@ -187,6 +217,51 @@ def still_grab_impl(clip_index: int, dry_run: bool = False) -> dict:
     return {"grabbed": True, "clip_index": clip_index}
 
 
+def color_version_list_impl(
+    clip_index: int, version_type: int = 0
+) -> list[dict]:
+    tl = _get_current_timeline()
+    clip_item = _get_clip_item_by_index(tl, clip_index)
+    names = clip_item.GetVersionNameList(version_type) or []
+    return [{"name": n, "version_type": version_type} for n in names]
+
+
+def color_version_current_impl(clip_index: int) -> dict:
+    tl = _get_current_timeline()
+    clip_item = _get_clip_item_by_index(tl, clip_index)
+    return clip_item.GetCurrentVersion()
+
+
+def color_version_add_impl(
+    clip_index: int,
+    name: str,
+    version_type: int = 0,
+    dry_run: bool = False,
+) -> dict:
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "version_add",
+            "name": name,
+            "version_type": version_type,
+            "clip_index": clip_index,
+        }
+    tl = _get_current_timeline()
+    clip_item = _get_clip_item_by_index(tl, clip_index)
+    result = clip_item.AddVersion(name, version_type)
+    if result is False:
+        raise ValidationError(
+            field="name",
+            reason=f"Failed to add version: {name}",
+        )
+    return {
+        "added": True,
+        "name": name,
+        "version_type": version_type,
+        "clip_index": clip_index,
+    }
+
+
 def still_list_impl() -> list[dict]:
     resolve = get_resolve()
     pm = resolve.GetProjectManager()
@@ -297,6 +372,57 @@ def still_list_cmd(ctx: click.Context) -> None:
     output(result, pretty=ctx.obj.get("pretty"))
 
 
+@color.group(name="version")
+def color_version() -> None:
+    """Version operations."""
+
+
+@color_version.command(name="list")
+@click.argument("clip_index", type=int)
+@click.option("--version-type", type=int, default=0, help="0=local, 1=remote")
+@click.pass_context
+def version_list_cmd(
+    ctx: click.Context, clip_index: int, version_type: int
+) -> None:
+    """バージョン一覧。"""
+    result = color_version_list_impl(
+        clip_index=clip_index, version_type=version_type
+    )
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@color_version.command(name="current")
+@click.argument("clip_index", type=int)
+@click.pass_context
+def version_current_cmd(ctx: click.Context, clip_index: int) -> None:
+    """現在のバージョンを取得する。"""
+    result = color_version_current_impl(clip_index=clip_index)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@color_version.command(name="add")
+@click.argument("clip_index", type=int)
+@click.argument("name")
+@click.option("--version-type", type=int, default=0, help="0=local, 1=remote")
+@dry_run_option
+@click.pass_context
+def version_add_cmd(
+    ctx: click.Context,
+    clip_index: int,
+    name: str,
+    version_type: int,
+    dry_run: bool,
+) -> None:
+    """バージョンを追加する。"""
+    result = color_version_add_impl(
+        clip_index=clip_index,
+        name=name,
+        version_type=version_type,
+        dry_run=dry_run,
+    )
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
 # --- Schema Registration ---
 
 register_schema(
@@ -309,3 +435,14 @@ register_schema("color.copy-grade", output_model=ColorCopyGradeOutput)
 register_schema("color.node.list", output_model=NodeInfo)
 register_schema("color.still.list", output_model=StillInfo)
 register_schema("color.still.grab", output_model=StillGrabOutput)
+register_schema(
+    "color.version.list",
+    output_model=VersionListOutput,
+    input_model=VersionListInput,
+)
+register_schema("color.version.current", output_model=VersionCurrentOutput)
+register_schema(
+    "color.version.add",
+    output_model=VersionAddOutput,
+    input_model=VersionAddInput,
+)
