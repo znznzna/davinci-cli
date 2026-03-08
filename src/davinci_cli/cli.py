@@ -85,6 +85,7 @@ def _register_commands() -> None:
         clip,
         color,
         deliver,
+        gallery,
         media,
         project,
         schema,
@@ -100,6 +101,7 @@ def _register_commands() -> None:
     dr.add_command(color.color)
     dr.add_command(media.media)
     dr.add_command(deliver.deliver)
+    dr.add_command(gallery.gallery)
 
 
 _register_commands()
