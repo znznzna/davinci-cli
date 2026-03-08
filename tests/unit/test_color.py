@@ -11,7 +11,10 @@ from davinci_cli.commands.color import (
     color_reset_impl,
     color_version_add_impl,
     color_version_current_impl,
+    color_version_delete_impl,
     color_version_list_impl,
+    color_version_load_impl,
+    color_version_rename_impl,
     node_list_impl,
     still_grab_impl,
     still_list_impl,
@@ -215,6 +218,137 @@ class TestColorVersionImpl:
             color_version_add_impl(clip_index=0, name="V2", version_type=0)
 
 
+class TestColorVersionMutateImpl:
+    def test_version_load_dry_run(self):
+        result = color_version_load_impl(
+            clip_index=0, name="V1", version_type=0, dry_run=True
+        )
+        assert result == {
+            "dry_run": True,
+            "action": "version_load",
+            "name": "V1",
+            "version_type": 0,
+            "clip_index": 0,
+        }
+
+    def test_version_load(self, mock_resolve):
+        clip = MagicMock()
+        clip.LoadVersionByName.return_value = True
+        pm = mock_resolve.GetProjectManager()
+        tl = pm.GetCurrentProject().GetCurrentTimeline()
+        tl.GetItemListInTrack.return_value = [clip]
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = color_version_load_impl(clip_index=0, name="V1", version_type=0)
+        clip.LoadVersionByName.assert_called_once_with("V1", 0)
+        assert result == {
+            "loaded": True,
+            "name": "V1",
+            "version_type": 0,
+            "clip_index": 0,
+        }
+
+    def test_version_load_failure(self, mock_resolve):
+        clip = MagicMock()
+        clip.LoadVersionByName.return_value = False
+        pm = mock_resolve.GetProjectManager()
+        tl = pm.GetCurrentProject().GetCurrentTimeline()
+        tl.GetItemListInTrack.return_value = [clip]
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
+            ValidationError, match="Failed to load version"
+        ):
+            color_version_load_impl(clip_index=0, name="V1", version_type=0)
+
+    def test_version_delete_dry_run(self):
+        result = color_version_delete_impl(
+            clip_index=0, name="V1", version_type=0, dry_run=True
+        )
+        assert result == {
+            "dry_run": True,
+            "action": "version_delete",
+            "name": "V1",
+            "version_type": 0,
+            "clip_index": 0,
+        }
+
+    def test_version_delete(self, mock_resolve):
+        clip = MagicMock()
+        clip.DeleteVersionByName.return_value = True
+        pm = mock_resolve.GetProjectManager()
+        tl = pm.GetCurrentProject().GetCurrentTimeline()
+        tl.GetItemListInTrack.return_value = [clip]
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = color_version_delete_impl(clip_index=0, name="V1", version_type=0)
+        clip.DeleteVersionByName.assert_called_once_with("V1", 0)
+        assert result == {
+            "deleted": True,
+            "name": "V1",
+            "version_type": 0,
+            "clip_index": 0,
+        }
+
+    def test_version_delete_failure(self, mock_resolve):
+        clip = MagicMock()
+        clip.DeleteVersionByName.return_value = False
+        pm = mock_resolve.GetProjectManager()
+        tl = pm.GetCurrentProject().GetCurrentTimeline()
+        tl.GetItemListInTrack.return_value = [clip]
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
+            ValidationError, match="Failed to delete version"
+        ):
+            color_version_delete_impl(clip_index=0, name="V1", version_type=0)
+
+    def test_version_rename_dry_run(self):
+        result = color_version_rename_impl(
+            clip_index=0, old_name="V1", new_name="V2", version_type=0, dry_run=True
+        )
+        assert result == {
+            "dry_run": True,
+            "action": "version_rename",
+            "old_name": "V1",
+            "new_name": "V2",
+            "version_type": 0,
+            "clip_index": 0,
+        }
+
+    def test_version_rename(self, mock_resolve):
+        clip = MagicMock()
+        clip.RenameVersionByName.return_value = True
+        pm = mock_resolve.GetProjectManager()
+        tl = pm.GetCurrentProject().GetCurrentTimeline()
+        tl.GetItemListInTrack.return_value = [clip]
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = color_version_rename_impl(
+                clip_index=0, old_name="V1", new_name="V2", version_type=0
+            )
+        clip.RenameVersionByName.assert_called_once_with("V1", "V2", 0)
+        assert result == {
+            "renamed": True,
+            "old_name": "V1",
+            "new_name": "V2",
+            "version_type": 0,
+            "clip_index": 0,
+        }
+
+    def test_version_rename_failure(self, mock_resolve):
+        clip = MagicMock()
+        clip.RenameVersionByName.return_value = False
+        pm = mock_resolve.GetProjectManager()
+        tl = pm.GetCurrentProject().GetCurrentTimeline()
+        tl.GetItemListInTrack.return_value = [clip]
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
+            ValidationError, match="Failed to rename version"
+        ):
+            color_version_rename_impl(
+                clip_index=0, old_name="V1", new_name="V2", version_type=0
+            )
+
+
 class TestColorCLI:
     def test_apply_lut_dry_run(self, tmp_path):
         lut_file = tmp_path / "test.cube"
@@ -239,3 +373,30 @@ class TestColorCLI:
     def test_reset_dry_run(self):
         result = CliRunner().invoke(dr, ["color", "reset", "0", "--dry-run"])
         assert result.exit_code == 0
+
+    def test_version_load_dry_run_cli(self):
+        result = CliRunner().invoke(
+            dr, ["color", "version", "load", "0", "V1", "--dry-run"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["dry_run"] is True
+        assert data["action"] == "version_load"
+
+    def test_version_delete_dry_run_cli(self):
+        result = CliRunner().invoke(
+            dr, ["color", "version", "delete", "0", "V1", "--dry-run"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["dry_run"] is True
+        assert data["action"] == "version_delete"
+
+    def test_version_rename_dry_run_cli(self):
+        result = CliRunner().invoke(
+            dr, ["color", "version", "rename", "0", "V1", "V2", "--dry-run"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["dry_run"] is True
+        assert data["action"] == "version_rename"

@@ -98,6 +98,53 @@ class VersionAddOutput(BaseModel):
     action: str | None = None
 
 
+class VersionLoadInput(BaseModel):
+    clip_index: int
+    name: str
+    version_type: int = 0
+
+
+class VersionLoadOutput(BaseModel):
+    loaded: bool | None = None
+    name: str
+    version_type: int
+    clip_index: int
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class VersionDeleteInput(BaseModel):
+    clip_index: int
+    name: str
+    version_type: int = 0
+
+
+class VersionDeleteOutput(BaseModel):
+    deleted: bool | None = None
+    name: str
+    version_type: int
+    clip_index: int
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class VersionRenameInput(BaseModel):
+    clip_index: int
+    old_name: str
+    new_name: str
+    version_type: int = 0
+
+
+class VersionRenameOutput(BaseModel):
+    renamed: bool | None = None
+    old_name: str
+    new_name: str
+    version_type: int
+    clip_index: int
+    dry_run: bool | None = None
+    action: str | None = None
+
+
 # --- Helper ---
 
 
@@ -257,6 +304,99 @@ def color_version_add_impl(
     return {
         "added": True,
         "name": name,
+        "version_type": version_type,
+        "clip_index": clip_index,
+    }
+
+
+def color_version_load_impl(
+    clip_index: int,
+    name: str,
+    version_type: int = 0,
+    dry_run: bool = False,
+) -> dict:
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "version_load",
+            "name": name,
+            "version_type": version_type,
+            "clip_index": clip_index,
+        }
+    tl = _get_current_timeline()
+    clip_item = _get_clip_item_by_index(tl, clip_index)
+    result = clip_item.LoadVersionByName(name, version_type)
+    if result is False:
+        raise ValidationError(
+            field="name",
+            reason=f"Failed to load version: {name}",
+        )
+    return {
+        "loaded": True,
+        "name": name,
+        "version_type": version_type,
+        "clip_index": clip_index,
+    }
+
+
+def color_version_delete_impl(
+    clip_index: int,
+    name: str,
+    version_type: int = 0,
+    dry_run: bool = False,
+) -> dict:
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "version_delete",
+            "name": name,
+            "version_type": version_type,
+            "clip_index": clip_index,
+        }
+    tl = _get_current_timeline()
+    clip_item = _get_clip_item_by_index(tl, clip_index)
+    result = clip_item.DeleteVersionByName(name, version_type)
+    if result is False:
+        raise ValidationError(
+            field="name",
+            reason=f"Failed to delete version: {name}",
+        )
+    return {
+        "deleted": True,
+        "name": name,
+        "version_type": version_type,
+        "clip_index": clip_index,
+    }
+
+
+def color_version_rename_impl(
+    clip_index: int,
+    old_name: str,
+    new_name: str,
+    version_type: int = 0,
+    dry_run: bool = False,
+) -> dict:
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "version_rename",
+            "old_name": old_name,
+            "new_name": new_name,
+            "version_type": version_type,
+            "clip_index": clip_index,
+        }
+    tl = _get_current_timeline()
+    clip_item = _get_clip_item_by_index(tl, clip_index)
+    result = clip_item.RenameVersionByName(old_name, new_name, version_type)
+    if result is False:
+        raise ValidationError(
+            field="old_name",
+            reason=f"Failed to rename version: {old_name}",
+        )
+    return {
+        "renamed": True,
+        "old_name": old_name,
+        "new_name": new_name,
         "version_type": version_type,
         "clip_index": clip_index,
     }
@@ -423,6 +563,78 @@ def version_add_cmd(
     output(result, pretty=ctx.obj.get("pretty"))
 
 
+@color_version.command(name="load")
+@click.argument("clip_index", type=int)
+@click.argument("name")
+@click.option("--version-type", type=int, default=0, help="0=local, 1=remote")
+@dry_run_option
+@click.pass_context
+def version_load_cmd(
+    ctx: click.Context,
+    clip_index: int,
+    name: str,
+    version_type: int,
+    dry_run: bool,
+) -> None:
+    """バージョンをロードする。"""
+    result = color_version_load_impl(
+        clip_index=clip_index,
+        name=name,
+        version_type=version_type,
+        dry_run=dry_run,
+    )
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@color_version.command(name="delete")
+@click.argument("clip_index", type=int)
+@click.argument("name")
+@click.option("--version-type", type=int, default=0, help="0=local, 1=remote")
+@dry_run_option
+@click.pass_context
+def version_delete_cmd(
+    ctx: click.Context,
+    clip_index: int,
+    name: str,
+    version_type: int,
+    dry_run: bool,
+) -> None:
+    """バージョンを削除する。"""
+    result = color_version_delete_impl(
+        clip_index=clip_index,
+        name=name,
+        version_type=version_type,
+        dry_run=dry_run,
+    )
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@color_version.command(name="rename")
+@click.argument("clip_index", type=int)
+@click.argument("old_name")
+@click.argument("new_name")
+@click.option("--version-type", type=int, default=0, help="0=local, 1=remote")
+@dry_run_option
+@click.pass_context
+def version_rename_cmd(
+    ctx: click.Context,
+    clip_index: int,
+    old_name: str,
+    new_name: str,
+    version_type: int,
+    dry_run: bool,
+) -> None:
+    """バージョンをリネームする。"""
+    result = color_version_rename_impl(
+        clip_index=clip_index,
+        old_name=old_name,
+        new_name=new_name,
+        version_type=version_type,
+        dry_run=dry_run,
+    )
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
 # --- Schema Registration ---
 
 register_schema(
@@ -445,4 +657,19 @@ register_schema(
     "color.version.add",
     output_model=VersionAddOutput,
     input_model=VersionAddInput,
+)
+register_schema(
+    "color.version.load",
+    output_model=VersionLoadOutput,
+    input_model=VersionLoadInput,
+)
+register_schema(
+    "color.version.delete",
+    output_model=VersionDeleteOutput,
+    input_model=VersionDeleteInput,
+)
+register_schema(
+    "color.version.rename",
+    output_model=VersionRenameOutput,
+    input_model=VersionRenameInput,
 )
