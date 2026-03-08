@@ -88,3 +88,17 @@ class TestOutput:
         captured = capsys.readouterr()
         parsed = json.loads(captured.out.strip())
         assert parsed["name"] == "MyProject"
+
+    def test_empty_list_outputs_json_array(self, capsys):
+        with patch("davinci_cli.output.formatter.is_tty", return_value=False):
+            output([])
+        captured = capsys.readouterr()
+        assert captured.out.strip() == "[]"
+        parsed = json.loads(captured.out.strip())
+        assert parsed == []
+
+    def test_empty_list_pretty_mode(self, capsys):
+        with patch("davinci_cli.output.formatter.is_tty", return_value=True):
+            output([], pretty=True)
+        captured = capsys.readouterr()
+        assert "[]" in captured.out

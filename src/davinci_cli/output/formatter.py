@@ -61,6 +61,9 @@ def output(
 
     # 非TTY または pretty=False: NDJSON / JSON
     if isinstance(data, list):
+        if not data:
+            print("[]")
+            return
         for item in data:
             print(json.dumps(item, ensure_ascii=False))
     else:
