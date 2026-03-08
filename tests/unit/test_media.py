@@ -10,10 +10,14 @@ from davinci_cli.commands.media import (
     folder_delete_impl,
     folder_list_impl,
     media_delete_impl,
+    media_export_metadata_impl,
     media_import_impl,
     media_list_impl,
+    media_metadata_get_impl,
+    media_metadata_set_impl,
     media_move_impl,
     media_relink_impl,
+    media_transcribe_impl,
     media_unlink_impl,
 )
 from davinci_cli.core.exceptions import ValidationError
@@ -180,6 +184,106 @@ class TestMediaExtendedImpl:
             result = media_unlink_impl(clip_names=["clip1.mov"])
         assert result["unlinked_count"] == 1
         media_pool.UnlinkClips.assert_called_once()
+
+
+class TestMediaMetadataImpl:
+    def test_metadata_get_all(self, mock_resolve):
+        clip = (
+            mock_resolve.GetProjectManager()
+            .GetCurrentProject()
+            .GetMediaPool()
+            .GetCurrentFolder()
+            .GetClipList()[0]
+        )
+        clip.GetMetadata.return_value = {"Description": "test", "Comments": "note"}
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = media_metadata_get_impl(clip_name="clip1.mov")
+        assert result == {"Description": "test", "Comments": "note"}
+        clip.GetMetadata.assert_called_once_with()
+
+    def test_metadata_get_with_key(self, mock_resolve):
+        clip = (
+            mock_resolve.GetProjectManager()
+            .GetCurrentProject()
+            .GetMediaPool()
+            .GetCurrentFolder()
+            .GetClipList()[0]
+        )
+        clip.GetMetadata.side_effect = lambda *args: (
+            "test" if args == ("Description",) else {"Description": "test"}
+        )
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = media_metadata_get_impl(clip_name="clip1.mov", key="Description")
+        assert result == {"key": "Description", "value": "test"}
+
+    def test_metadata_set_dry_run(self):
+        result = media_metadata_set_impl(
+            clip_name="clip1.mov", key="Description", value="new desc", dry_run=True
+        )
+        assert result["dry_run"] is True
+        assert result["action"] == "media_metadata_set"
+        assert result["clip_name"] == "clip1.mov"
+        assert result["key"] == "Description"
+        assert result["value"] == "new desc"
+
+    def test_metadata_set(self, mock_resolve):
+        clip = (
+            mock_resolve.GetProjectManager()
+            .GetCurrentProject()
+            .GetMediaPool()
+            .GetCurrentFolder()
+            .GetClipList()[0]
+        )
+        clip.SetMetadata.return_value = True
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = media_metadata_set_impl(
+                clip_name="clip1.mov", key="Description", value="new desc"
+            )
+        assert result["clip_name"] == "clip1.mov"
+        assert result["key"] == "Description"
+        assert result["value"] == "new desc"
+        clip.SetMetadata.assert_called_once_with("Description", "new desc")
+
+    def test_export_metadata_dry_run(self):
+        result = media_export_metadata_impl(file_name="/tmp/meta.csv", dry_run=True)
+        assert result["dry_run"] is True
+        assert result["action"] == "media_export_metadata"
+
+    def test_export_metadata(self, mock_resolve):
+        media_pool = (
+            mock_resolve.GetProjectManager()
+            .GetCurrentProject()
+            .GetMediaPool()
+        )
+        media_pool.ExportMetadata.return_value = True
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = media_export_metadata_impl(file_name="/tmp/meta.csv")
+        assert result["exported"] is True
+        media_pool.ExportMetadata.assert_called_once()
+
+    def test_export_metadata_path_traversal(self):
+        with pytest.raises(ValidationError, match="path traversal"):
+            media_export_metadata_impl(file_name="../../../etc/passwd")
+
+    def test_transcribe(self, mock_resolve):
+        clip = (
+            mock_resolve.GetProjectManager()
+            .GetCurrentProject()
+            .GetMediaPool()
+            .GetCurrentFolder()
+            .GetClipList()[0]
+        )
+        clip.TranscribeAudio.return_value = True
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = media_transcribe_impl(clip_name="clip1.mov")
+        assert result["clip_name"] == "clip1.mov"
+        assert result["transcribed"] is True
+        clip.TranscribeAudio.assert_called_once()
 
 
 class TestMediaCLI:

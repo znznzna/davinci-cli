@@ -105,6 +105,50 @@ class MediaUnlinkOutput(BaseModel):
     clip_names: list[str]
 
 
+class MediaMetadataGetInput(BaseModel):
+    clip_name: str
+    key: str | None = None
+
+
+class MediaMetadataGetOutput(BaseModel):
+    key: str | None = None
+    value: str | None = None
+
+
+class MediaMetadataSetInput(BaseModel):
+    clip_name: str
+    key: str
+    value: str
+
+
+class MediaMetadataSetOutput(BaseModel):
+    clip_name: str
+    key: str
+    value: str
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class MediaExportMetadataInput(BaseModel):
+    file_name: str
+
+
+class MediaExportMetadataOutput(BaseModel):
+    exported: bool | None = None
+    file_name: str | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class MediaTranscribeInput(BaseModel):
+    clip_name: str
+
+
+class MediaTranscribeOutput(BaseModel):
+    clip_name: str
+    transcribed: bool
+
+
 # --- Helper ---
 
 
@@ -313,6 +357,71 @@ def media_unlink_impl(clip_names: list[str]) -> dict:
     }
 
 
+def media_metadata_get_impl(
+    clip_name: str,
+    key: str | None = None,
+) -> dict:
+    media_pool = _get_media_pool()
+    clip = _find_clips_by_names(media_pool, [clip_name])[0]
+    if key is not None:
+        value = clip.GetMetadata(key)
+        return {"key": key, "value": value}
+    return clip.GetMetadata()
+
+
+def media_metadata_set_impl(
+    clip_name: str,
+    key: str,
+    value: str,
+    dry_run: bool = False,
+) -> dict:
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "media_metadata_set",
+            "clip_name": clip_name,
+            "key": key,
+            "value": value,
+        }
+    media_pool = _get_media_pool()
+    clip = _find_clips_by_names(media_pool, [clip_name])[0]
+    clip.SetMetadata(key, value)
+    return {
+        "clip_name": clip_name,
+        "key": key,
+        "value": value,
+    }
+
+
+def media_export_metadata_impl(
+    file_name: str,
+    dry_run: bool = False,
+) -> dict:
+    validated = validate_path(file_name)
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "media_export_metadata",
+            "file_name": str(validated),
+        }
+    media_pool = _get_media_pool()
+    result = media_pool.ExportMetadata(str(validated))
+    return {
+        "exported": bool(result),
+        "file_name": str(validated),
+    }
+
+
+def media_transcribe_impl(clip_name: str) -> dict:
+    media_pool = _get_media_pool()
+    clip = _find_clips_by_names(media_pool, [clip_name])[0]
+    result = clip.TranscribeAudio()
+    return {
+        "clip_name": clip_name,
+        "transcribed": bool(result),
+    }
+
+
 # --- CLI Commands ---
 
 
@@ -430,6 +539,60 @@ def media_unlink_cmd(ctx: click.Context, clip_names: tuple[str, ...]) -> None:
     output(result, pretty=ctx.obj.get("pretty"))
 
 
+@media.group(name="metadata")
+def media_metadata() -> None:
+    """Media metadata operations."""
+
+
+@media_metadata.command(name="get")
+@click.argument("clip_name")
+@click.option("--key", default=None, help="Metadata key to retrieve")
+@click.pass_context
+def media_metadata_get_cmd(
+    ctx: click.Context, clip_name: str, key: str | None
+) -> None:
+    """クリップのメタデータを取得。"""
+    result = media_metadata_get_impl(clip_name=clip_name, key=key)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@media_metadata.command(name="set")
+@click.argument("clip_name")
+@click.option("--key", required=True, help="Metadata key")
+@click.option("--value", required=True, help="Metadata value")
+@dry_run_option
+@click.pass_context
+def media_metadata_set_cmd(
+    ctx: click.Context, clip_name: str, key: str, value: str, dry_run: bool
+) -> None:
+    """クリップのメタデータを設定。"""
+    result = media_metadata_set_impl(
+        clip_name=clip_name, key=key, value=value, dry_run=dry_run
+    )
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@media.command(name="export-metadata")
+@click.argument("file_name")
+@dry_run_option
+@click.pass_context
+def media_export_metadata_cmd(
+    ctx: click.Context, file_name: str, dry_run: bool
+) -> None:
+    """メディアプールのメタデータをエクスポート。"""
+    result = media_export_metadata_impl(file_name=file_name, dry_run=dry_run)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@media.command(name="transcribe")
+@click.argument("clip_name")
+@click.pass_context
+def media_transcribe_cmd(ctx: click.Context, clip_name: str) -> None:
+    """クリップの音声を文字起こし。"""
+    result = media_transcribe_impl(clip_name=clip_name)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
 # --- Schema Registration ---
 
 register_schema("media.list", output_model=MediaItem)
@@ -468,4 +631,24 @@ register_schema(
     "media.unlink",
     output_model=MediaUnlinkOutput,
     input_model=MediaUnlinkInput,
+)
+register_schema(
+    "media.metadata.get",
+    output_model=MediaMetadataGetOutput,
+    input_model=MediaMetadataGetInput,
+)
+register_schema(
+    "media.metadata.set",
+    output_model=MediaMetadataSetOutput,
+    input_model=MediaMetadataSetInput,
+)
+register_schema(
+    "media.export-metadata",
+    output_model=MediaExportMetadataOutput,
+    input_model=MediaExportMetadataInput,
+)
+register_schema(
+    "media.transcribe",
+    output_model=MediaTranscribeOutput,
+    input_model=MediaTranscribeInput,
 )
