@@ -12,8 +12,9 @@ from davinci_cli.commands.project import (
     project_info_impl,
     project_list_impl,
     project_open_impl,
+    project_rename_impl,
 )
-from davinci_cli.core.exceptions import ProjectNotFoundError
+from davinci_cli.core.exceptions import ProjectNotFoundError, ValidationError
 
 RESOLVE_PATCH = "davinci_cli.commands.project.get_resolve"
 
@@ -108,6 +109,43 @@ class TestProjectInfoImpl:
             result = project_info_impl(fields=["name"])
         assert "name" in result
         assert "fps" not in result
+
+
+class TestProjectRenameImpl:
+    def test_rename_dry_run(self):
+        result = project_rename_impl("NewName", dry_run=True)
+        assert result == {"dry_run": True, "action": "rename", "name": "NewName"}
+
+    def test_rename_success(self, mock_resolve):
+        mock_resolve.GetProjectManager().GetCurrentProject().SetName.return_value = (
+            True
+        )
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = project_rename_impl("NewName")
+        assert result == {"renamed": True, "name": "NewName"}
+        mock_resolve.GetProjectManager().GetCurrentProject().SetName.assert_called_with(
+            "NewName"
+        )
+
+    def test_rename_failure(self, mock_resolve):
+        mock_resolve.GetProjectManager().GetCurrentProject().SetName.return_value = (
+            False
+        )
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="Failed to rename"),
+        ):
+            project_rename_impl("NewName")
+
+    def test_rename_cli_dry_run(self):
+        result = CliRunner().invoke(
+            dr, ["project", "rename", "NewName", "--dry-run"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["dry_run"] is True
+        assert data["action"] == "rename"
+        assert data["name"] == "NewName"
 
 
 class TestProjectCLI:

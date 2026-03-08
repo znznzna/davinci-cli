@@ -67,6 +67,13 @@ class ProjectDeleteInput(BaseModel):
     name: str
 
 
+class ProjectRenameOutput(BaseModel):
+    renamed: bool | None = None
+    name: str
+    dry_run: bool | None = None
+    action: str | None = None
+
+
 class ProjectSaveOutput(BaseModel):
     saved: bool
 
@@ -162,6 +169,18 @@ def project_delete_impl(name: str, dry_run: bool = False) -> dict:
     if not success:
         raise ProjectNotFoundError(name=name)
     return {"deleted": name}
+
+
+def project_rename_impl(name: str, dry_run: bool = False) -> dict:
+    if dry_run:
+        return {"dry_run": True, "action": "rename", "name": name}
+    project = _get_current_project()
+    result = project.SetName(name)
+    if result is False:
+        raise ValidationError(
+            field="name", reason=f"Failed to rename project to: {name}"
+        )
+    return {"renamed": True, "name": name}
 
 
 def project_save_impl() -> dict:
@@ -274,6 +293,16 @@ def project_delete_cmd(ctx: click.Context, name: str, dry_run: bool) -> None:
     output(result, pretty=ctx.obj.get("pretty"))
 
 
+@project.command(name="rename")
+@click.argument("name")
+@dry_run_option
+@click.pass_context
+def project_rename(ctx: click.Context, name: str, dry_run: bool) -> None:
+    """プロジェクト名を変更する。"""
+    result = project_rename_impl(name=name, dry_run=dry_run)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
 @project.command(name="save")
 @click.pass_context
 def project_save_cmd(ctx: click.Context) -> None:
@@ -335,6 +364,7 @@ register_schema(
     output_model=ProjectDeleteOutput,
     input_model=ProjectDeleteInput,
 )
+register_schema("project.rename", output_model=ProjectRenameOutput)
 register_schema("project.save", output_model=ProjectSaveOutput)
 register_schema("project.info", output_model=ProjectInfoOutput)
 register_schema("project.settings.get", output_model=ProjectSettingsGetOutput)
