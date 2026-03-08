@@ -18,6 +18,9 @@ from davinci_cli.commands.timeline import (
     timeline_export_impl,
     timeline_list_impl,
     timeline_switch_impl,
+    track_add_impl,
+    track_delete_impl,
+    track_list_impl,
 )
 from davinci_cli.core.exceptions import ProjectNotOpenError, ValidationError
 
@@ -38,6 +41,12 @@ def mock_resolve():
         "timelineResolutionHeight": "1080",
     }.get(k, "")
     timeline1.GetStartTimecode.return_value = "00:00:00:00"
+    track_counts = {"video": 2, "audio": 1, "subtitle": 0}
+    timeline1.GetTrackCount.side_effect = lambda t: track_counts.get(t, 0)
+    timeline1.GetTrackName.side_effect = lambda t, i: f"{t} {i}"
+    timeline1.AddTrack.return_value = True
+    timeline1.DeleteTrack.return_value = True
+
     timeline1.GetMarkers.return_value = {
         100: {"color": "Blue", "name": "VFX", "note": "", "duration": 1},
     }
@@ -194,6 +203,81 @@ class TestCurrentItemImpl:
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = current_item_impl()
         assert result == {"name": None}
+
+
+class TestTrackImpl:
+    def test_track_list(self, mock_resolve):
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = track_list_impl()
+        assert len(result) == 3  # video 2 + audio 1
+        assert result[0] == {"type": "video", "index": 1, "name": "video 1"}
+        assert result[1] == {"type": "video", "index": 2, "name": "video 2"}
+        assert result[2] == {"type": "audio", "index": 1, "name": "audio 1"}
+
+    def test_track_add_dry_run(self):
+        result = track_add_impl("video", dry_run=True)
+        assert result == {
+            "dry_run": True,
+            "action": "track_add",
+            "track_type": "video",
+            "sub_track_type": None,
+        }
+
+    def test_track_add(self, mock_resolve):
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = track_add_impl("video")
+        assert result == {"added": True, "track_type": "video"}
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.AddTrack.assert_called_once_with("video")
+
+    def test_track_add_with_sub_type(self, mock_resolve):
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = track_add_impl("audio", sub_track_type="mono")
+        assert result == {"added": True, "track_type": "audio"}
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.AddTrack.assert_called_once_with("audio", "mono")
+
+    def test_track_delete_dry_run(self):
+        result = track_delete_impl("video", 2, dry_run=True)
+        assert result == {
+            "dry_run": True,
+            "action": "track_delete",
+            "track_type": "video",
+            "index": 2,
+        }
+
+    def test_track_delete(self, mock_resolve):
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = track_delete_impl("video", 2)
+        assert result == {"deleted": True, "track_type": "video", "index": 2}
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.DeleteTrack.assert_called_once_with("video", 2)
+
+    def test_track_add_invalid_type(self):
+        with pytest.raises(ValidationError):
+            track_add_impl("invalid")
+
+    def test_track_delete_invalid_type(self):
+        with pytest.raises(ValidationError):
+            track_delete_impl("invalid", 1)
+
+    def test_track_add_failure(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.AddTrack.return_value = False
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError),
+        ):
+            track_add_impl("video")
+
+    def test_track_delete_failure(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.DeleteTrack.return_value = False
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError),
+        ):
+            track_delete_impl("video", 2)
 
 
 class TestTimelineCLI:

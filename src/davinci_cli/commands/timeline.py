@@ -129,6 +129,38 @@ class TimecodeSetInput(BaseModel):
     timecode: str
 
 
+class TrackListItem(BaseModel):
+    type: str
+    index: int
+    name: str
+
+
+class TrackAddOutput(BaseModel):
+    added: bool | None = None
+    track_type: str | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+    sub_track_type: str | None = None
+
+
+class TrackAddInput(BaseModel):
+    track_type: str
+    sub_track_type: str | None = None
+
+
+class TrackDeleteOutput(BaseModel):
+    deleted: bool | None = None
+    track_type: str | None = None
+    index: int | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class TrackDeleteInput(BaseModel):
+    track_type: str
+    index: int
+
+
 class CurrentItemOutput(BaseModel):
     name: str | None = None
 
@@ -358,6 +390,78 @@ def timecode_set_impl(timecode: str, dry_run: bool = False) -> dict:
     return {"set": True, "timecode": timecode}
 
 
+_VALID_TRACK_TYPES = {"video", "audio", "subtitle"}
+
+
+def track_list_impl() -> list[dict]:
+    """全トラックタイプのトラック一覧を返す。"""
+    tl = _get_current_timeline()
+    result = []
+    for track_type in ["video", "audio", "subtitle"]:
+        count = tl.GetTrackCount(track_type)
+        for idx in range(1, count + 1):
+            name = tl.GetTrackName(track_type, idx)
+            result.append(
+                {"type": track_type, "index": idx, "name": name or f"{track_type} {idx}"}
+            )
+    return result
+
+
+def track_add_impl(
+    track_type: str, sub_track_type: str | None = None, dry_run: bool = False
+) -> dict:
+    """トラックを追加する。"""
+    if track_type not in _VALID_TRACK_TYPES:
+        raise ValidationError(
+            field="track_type",
+            reason=f"Invalid: {track_type}. Valid: {', '.join(sorted(_VALID_TRACK_TYPES))}",
+        )
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "track_add",
+            "track_type": track_type,
+            "sub_track_type": sub_track_type,
+        }
+    tl = _get_current_timeline()
+    result = (
+        tl.AddTrack(track_type, sub_track_type)
+        if sub_track_type
+        else tl.AddTrack(track_type)
+    )
+    if result is False:
+        raise ValidationError(
+            field="track_type", reason=f"Failed to add {track_type} track"
+        )
+    return {"added": True, "track_type": track_type}
+
+
+def track_delete_impl(
+    track_type: str, index: int, dry_run: bool = False
+) -> dict:
+    """トラックを削除する。"""
+    if track_type not in _VALID_TRACK_TYPES:
+        raise ValidationError(
+            field="track_type",
+            reason=f"Invalid: {track_type}. Valid: {', '.join(sorted(_VALID_TRACK_TYPES))}",
+        )
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "track_delete",
+            "track_type": track_type,
+            "index": index,
+        }
+    tl = _get_current_timeline()
+    result = tl.DeleteTrack(track_type, index)
+    if result is False:
+        raise ValidationError(
+            field="index",
+            reason=f"Failed to delete {track_type} track at index {index}",
+        )
+    return {"deleted": True, "track_type": track_type, "index": index}
+
+
 def current_item_impl() -> dict:
     tl = _get_current_timeline()
     item = tl.GetCurrentVideoItem()
@@ -490,6 +594,71 @@ def current_item_cmd(ctx: click.Context) -> None:
     output(result, pretty=ctx.obj.get("pretty"))
 
 
+@timeline.group(name="track")
+def timeline_track() -> None:
+    """Track operations."""
+
+
+@timeline_track.command(name="list")
+@click.pass_context
+def track_list_cmd(ctx: click.Context) -> None:
+    """トラック一覧。"""
+    result = track_list_impl()
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@timeline_track.command(name="add")
+@click.option("--track-type", required=True, help="Track type: video, audio, subtitle")
+@click.option("--sub-track-type", default=None, help="Sub track type (e.g., mono, stereo)")
+@json_input_option
+@dry_run_option
+@click.pass_context
+def track_add_cmd(
+    ctx: click.Context,
+    track_type: str | None,
+    sub_track_type: str | None,
+    json_input: dict | None,
+    dry_run: bool,
+) -> None:
+    """トラック追加。"""
+    if json_input:
+        data = TrackAddInput.model_validate(json_input)
+        track_type = data.track_type
+        sub_track_type = data.sub_track_type
+    if not track_type:
+        raise click.UsageError("--track-type or --json is required")
+    result = track_add_impl(
+        track_type=track_type, sub_track_type=sub_track_type, dry_run=dry_run
+    )
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@timeline_track.command(name="delete")
+@click.option("--track-type", required=True, help="Track type: video, audio, subtitle")
+@click.option("--index", required=True, type=int, help="Track index (1-based)")
+@json_input_option
+@dry_run_option
+@click.pass_context
+def track_delete_cmd(
+    ctx: click.Context,
+    track_type: str | None,
+    index: int | None,
+    json_input: dict | None,
+    dry_run: bool,
+) -> None:
+    """トラック削除（破壊的操作）。"""
+    if json_input:
+        data = TrackDeleteInput.model_validate(json_input)
+        track_type = data.track_type
+        index = data.index
+    if not track_type or index is None:
+        raise click.UsageError("--track-type and --index (or --json) are required")
+    result = track_delete_impl(
+        track_type=track_type, index=index, dry_run=dry_run
+    )
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
 @timeline.group(name="marker")
 def timeline_marker() -> None:
     """Marker operations."""
@@ -576,3 +745,14 @@ register_schema(
     input_model=TimecodeSetInput,
 )
 register_schema("timeline.current-item", output_model=CurrentItemOutput)
+register_schema("timeline.track.list", output_model=TrackListItem)
+register_schema(
+    "timeline.track.add",
+    output_model=TrackAddOutput,
+    input_model=TrackAddInput,
+)
+register_schema(
+    "timeline.track.delete",
+    output_model=TrackDeleteOutput,
+    input_model=TrackDeleteInput,
+)
