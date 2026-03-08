@@ -101,6 +101,10 @@ class TestColorGradeImpl:
         result = color_paste_grade_impl(to_index=3, dry_run=True)
         assert result["dry_run"] is True
 
+    def test_paste_grade_raises_unsupported(self):
+        with pytest.raises(ValidationError):
+            color_paste_grade_impl(to_index=3, dry_run=False)
+
 
 class TestNodeImpl:
     def test_node_list(self, mock_resolve):
@@ -139,6 +143,10 @@ class TestStillImpl:
     def test_still_apply_dry_run(self):
         result = still_apply_impl(clip_index=0, still_index=0, dry_run=True)
         assert result["dry_run"] is True
+
+    def test_still_apply_raises_unsupported(self):
+        with pytest.raises(ValidationError):
+            still_apply_impl(clip_index=0, still_index=0, dry_run=False)
 
 
 class TestColorCLI:

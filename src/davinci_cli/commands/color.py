@@ -162,7 +162,7 @@ def color_reset_impl(clip_index: int, dry_run: bool = False) -> dict:
         return {"dry_run": True, "action": "reset", "clip_index": clip_index}
     tl = _get_current_timeline()
     clip_item = _get_clip_item_by_index(tl, clip_index)
-    clip_item.ResetAllGrades()
+    clip_item.ResetAllNodeColors()
     return {"reset": True, "clip_index": clip_index}
 
 
@@ -176,10 +176,11 @@ def color_copy_grade_impl(from_index: int) -> dict:
 def color_paste_grade_impl(to_index: int, dry_run: bool = False) -> dict:
     if dry_run:
         return {"dry_run": True, "action": "paste_grade", "to_index": to_index}
-    tl = _get_current_timeline()
-    clip_item = _get_clip_item_by_index(tl, to_index)
-    clip_item.PasteGrades()
-    return {"pasted_to": to_index}
+    raise ValidationError(
+        field="paste_grade",
+        reason="DaVinci Resolve API does not support pasting grades programmatically. "
+        "Use copy-grade to copy grades between clips via CopyGrades().",
+    )
 
 
 def node_list_impl(clip_index: int) -> list[dict]:
@@ -226,8 +227,8 @@ def still_grab_impl(clip_index: int, dry_run: bool = False) -> dict:
             "clip_index": clip_index,
         }
     tl = _get_current_timeline()
-    clip_item = _get_clip_item_by_index(tl, clip_index)
-    clip_item.GrabStill()
+    _get_clip_item_by_index(tl, clip_index)  # validate index exists
+    tl.GrabStill()
     return {"grabbed": True, "clip_index": clip_index}
 
 
@@ -264,24 +265,10 @@ def still_apply_impl(
             "clip_index": clip_index,
             "still_index": still_index,
         }
-    tl = _get_current_timeline()
-    clip_item = _get_clip_item_by_index(tl, clip_index)
-    resolve = get_resolve()
-    project = resolve.GetProjectManager().GetCurrentProject()
-    gallery = project.GetGallery()
-    album = gallery.GetCurrentStillAlbum() if gallery else None
-    stills = (album.GetStills() if album else None) or []
-    if still_index < 0 or still_index >= len(stills):
-        raise ValidationError(
-            field="still_index",
-            reason=f"Still index {still_index} out of range",
-        )
-    clip_item.ApplyGradeFromStill(stills[still_index])
-    return {
-        "applied": True,
-        "clip_index": clip_index,
-        "still_index": still_index,
-    }
+    raise ValidationError(
+        field="still_apply",
+        reason="DaVinci Resolve API does not support applying grades from stills programmatically",
+    )
 
 
 # --- CLI Commands ---
