@@ -7,7 +7,10 @@ from click.testing import CliRunner
 from davinci_cli.cli import dr
 from davinci_cli.commands.color import (
     color_apply_lut_impl,
+    color_cdl_set_impl,
     color_copy_grade_impl,
+    color_lut_export_impl,
+    color_reset_all_impl,
     color_reset_impl,
     color_version_add_impl,
     color_version_current_impl,
@@ -416,6 +419,97 @@ class TestGraphOperationsImpl:
         assert result["set"] is True
         assert result["node_index"] == 1
         assert result["enabled"] is True
+
+
+class TestColorExtendedImpl:
+    @pytest.fixture
+    def mock_resolve_with_graph(self, mock_resolve):
+        graph = MagicMock()
+        graph.ResetAllGrades.return_value = True
+
+        clip = MagicMock()
+        clip.SetCDL.return_value = True
+        clip.ExportLUT.return_value = True
+        clip.GetNodeGraph.return_value = graph
+        pm = mock_resolve.GetProjectManager()
+        tl = pm.GetCurrentProject().GetCurrentTimeline()
+        tl.GetItemListInTrack.return_value = [clip]
+        return mock_resolve, clip, graph
+
+    def test_cdl_set_dry_run(self):
+        result = color_cdl_set_impl(
+            clip_index=0,
+            node_index=1,
+            slope="0.5 0.4 0.2",
+            offset="0.4 0.3 0.2",
+            power="0.6 0.7 0.8",
+            saturation="0.65",
+            dry_run=True,
+        )
+        assert result["dry_run"] is True
+        assert result["action"] == "cdl_set"
+        assert result["clip_index"] == 0
+        assert result["node_index"] == 1
+
+    def test_cdl_set(self, mock_resolve_with_graph):
+        mock_resolve, clip, _graph = mock_resolve_with_graph
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = color_cdl_set_impl(
+                clip_index=0,
+                node_index=1,
+                slope="0.5 0.4 0.2",
+                offset="0.4 0.3 0.2",
+                power="0.6 0.7 0.8",
+                saturation="0.65",
+            )
+        clip.SetCDL.assert_called_once_with({
+            "NodeIndex": "1",
+            "Slope": "0.5 0.4 0.2",
+            "Offset": "0.4 0.3 0.2",
+            "Power": "0.6 0.7 0.8",
+            "Saturation": "0.65",
+        })
+        assert result["set"] is True
+        assert result["clip_index"] == 0
+        assert result["node_index"] == 1
+
+    def test_lut_export_dry_run(self, tmp_path):
+        result = color_lut_export_impl(
+            clip_index=0,
+            export_type=1,
+            path=str(tmp_path / "output.cube"),
+            dry_run=True,
+        )
+        assert result["dry_run"] is True
+        assert result["action"] == "lut_export"
+        assert result["clip_index"] == 0
+
+    def test_lut_export(self, mock_resolve_with_graph, tmp_path):
+        mock_resolve, clip, _graph = mock_resolve_with_graph
+        out_path = str(tmp_path / "output.cube")
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = color_lut_export_impl(
+                clip_index=0,
+                export_type=1,
+                path=out_path,
+            )
+        clip.ExportLUT.assert_called_once()
+        assert result["exported"] is True
+        assert result["clip_index"] == 0
+
+    def test_reset_all_dry_run(self):
+        result = color_reset_all_impl(clip_index=0, dry_run=True)
+        assert result["dry_run"] is True
+        assert result["action"] == "reset_all"
+        assert result["clip_index"] == 0
+
+    def test_reset_all(self, mock_resolve_with_graph):
+        mock_resolve, _clip, graph = mock_resolve_with_graph
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = color_reset_all_impl(clip_index=0)
+        graph.ResetAllGrades.assert_called_once()
+        assert result["reset"] is True
+        assert result["clip_index"] == 0
 
 
 class TestColorCLI:

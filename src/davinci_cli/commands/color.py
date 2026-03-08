@@ -145,6 +145,44 @@ class VersionRenameOutput(BaseModel):
     action: str | None = None
 
 
+class CdlSetInput(BaseModel):
+    clip_index: int
+    node_index: int
+    slope: str
+    offset: str
+    power: str
+    saturation: str
+
+
+class CdlSetOutput(BaseModel):
+    set: bool | None = None
+    clip_index: int
+    node_index: int
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class LutExportInput(BaseModel):
+    clip_index: int
+    export_type: int
+    path: str
+
+
+class LutExportOutput(BaseModel):
+    exported: bool | None = None
+    clip_index: int
+    path: str | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class ResetAllOutput(BaseModel):
+    reset: bool | None = None
+    clip_index: int
+    dry_run: bool | None = None
+    action: str | None = None
+
+
 class NodeLutSetInput(BaseModel):
     clip_index: int
     node_index: int
@@ -474,6 +512,74 @@ def still_list_impl() -> list[dict]:
     return result
 
 
+def color_cdl_set_impl(
+    clip_index: int,
+    node_index: int,
+    slope: str,
+    offset: str,
+    power: str,
+    saturation: str,
+    dry_run: bool = False,
+) -> dict:
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "cdl_set",
+            "clip_index": clip_index,
+            "node_index": node_index,
+        }
+    tl = _get_current_timeline()
+    clip_item = _get_clip_item_by_index(tl, clip_index)
+    cdl_map = {
+        "NodeIndex": str(node_index),
+        "Slope": slope,
+        "Offset": offset,
+        "Power": power,
+        "Saturation": saturation,
+    }
+    result = clip_item.SetCDL(cdl_map)
+    if result is False:
+        raise ValidationError(field="cdl", reason="Failed to set CDL values")
+    return {"set": True, "clip_index": clip_index, "node_index": node_index}
+
+
+def color_lut_export_impl(
+    clip_index: int,
+    export_type: int,
+    path: str,
+    dry_run: bool = False,
+) -> dict:
+    validated = validate_path(path)
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "lut_export",
+            "clip_index": clip_index,
+            "path": str(validated),
+        }
+    tl = _get_current_timeline()
+    clip_item = _get_clip_item_by_index(tl, clip_index)
+    result = clip_item.ExportLUT(export_type, str(validated))
+    if result is False:
+        raise ValidationError(
+            field="path", reason=f"Failed to export LUT to: {path}"
+        )
+    return {"exported": True, "clip_index": clip_index, "path": str(validated)}
+
+
+def color_reset_all_impl(clip_index: int, dry_run: bool = False) -> dict:
+    if dry_run:
+        return {"dry_run": True, "action": "reset_all", "clip_index": clip_index}
+    tl = _get_current_timeline()
+    graph = _get_node_graph(tl, clip_index)
+    result = graph.ResetAllGrades()
+    if result is False:
+        raise ValidationError(
+            field="reset_all", reason="Failed to reset all grades"
+        )
+    return {"reset": True, "clip_index": clip_index}
+
+
 def node_lut_set_impl(
     clip_index: int,
     node_index: int,
@@ -598,6 +704,75 @@ def copy_grade(
     result = color_copy_grade_impl(
         from_index=from_index, to_index=to_index, dry_run=dry_run
     )
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@color.command(name="cdl")
+@click.argument("clip_index", type=int)
+@click.option("--node-index", type=int, required=True, help="ノードインデックス")
+@click.option("--slope", type=str, required=True, help="Slope (e.g. '0.5 0.4 0.2')")
+@click.option("--offset", type=str, required=True, help="Offset (e.g. '0.4 0.3 0.2')")
+@click.option("--power", type=str, required=True, help="Power (e.g. '0.6 0.7 0.8')")
+@click.option(
+    "--saturation", type=str, required=True, help="Saturation (e.g. '0.65')"
+)
+@dry_run_option
+@click.pass_context
+def cdl_cmd(
+    ctx: click.Context,
+    clip_index: int,
+    node_index: int,
+    slope: str,
+    offset: str,
+    power: str,
+    saturation: str,
+    dry_run: bool,
+) -> None:
+    """CDL 値を設定する。"""
+    result = color_cdl_set_impl(
+        clip_index=clip_index,
+        node_index=node_index,
+        slope=slope,
+        offset=offset,
+        power=power,
+        saturation=saturation,
+        dry_run=dry_run,
+    )
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@color.command(name="lut-export")
+@click.argument("clip_index", type=int)
+@click.option("--export-type", type=int, required=True, help="LUT export type (enum)")
+@click.option("--path", type=str, required=True, help="出力先パス")
+@dry_run_option
+@click.pass_context
+def lut_export_cmd(
+    ctx: click.Context,
+    clip_index: int,
+    export_type: int,
+    path: str,
+    dry_run: bool,
+) -> None:
+    """LUT をエクスポートする。"""
+    result = color_lut_export_impl(
+        clip_index=clip_index,
+        export_type=export_type,
+        path=path,
+        dry_run=dry_run,
+    )
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@color.command(name="reset-all")
+@click.argument("clip_index", type=int)
+@dry_run_option
+@click.pass_context
+def reset_all_cmd(
+    ctx: click.Context, clip_index: int, dry_run: bool
+) -> None:
+    """全グレードをリセットする（Graph.ResetAllGrades）。"""
+    result = color_reset_all_impl(clip_index=clip_index, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
 
 
@@ -864,6 +1039,17 @@ register_schema(
     output_model=VersionRenameOutput,
     input_model=VersionRenameInput,
 )
+register_schema(
+    "color.cdl",
+    output_model=CdlSetOutput,
+    input_model=CdlSetInput,
+)
+register_schema(
+    "color.lut-export",
+    output_model=LutExportOutput,
+    input_model=LutExportInput,
+)
+register_schema("color.reset-all", output_model=ResetAllOutput)
 register_schema(
     "color.node.lut.set",
     output_model=NodeLutSetOutput,
