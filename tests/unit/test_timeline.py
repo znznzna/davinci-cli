@@ -20,7 +20,9 @@ from davinci_cli.commands.timeline import (
     timeline_switch_impl,
     track_add_impl,
     track_delete_impl,
+    track_enable_impl,
     track_list_impl,
+    track_lock_impl,
 )
 from davinci_cli.core.exceptions import ProjectNotOpenError, ValidationError
 
@@ -46,6 +48,10 @@ def mock_resolve():
     timeline1.GetTrackName.side_effect = lambda t, i: f"{t} {i}"
     timeline1.AddTrack.return_value = True
     timeline1.DeleteTrack.return_value = True
+    timeline1.GetIsTrackEnabled.return_value = True
+    timeline1.SetTrackEnable.return_value = True
+    timeline1.GetIsTrackLocked.return_value = False
+    timeline1.SetTrackLock.return_value = True
 
     timeline1.GetMarkers.return_value = {
         100: {"color": "Blue", "name": "VFX", "note": "", "duration": 1},
@@ -278,6 +284,58 @@ class TestTrackImpl:
             pytest.raises(ValidationError),
         ):
             track_delete_impl("video", 2)
+
+
+class TestTrackEnableLockImpl:
+    def test_track_enable_get(self, mock_resolve):
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = track_enable_impl("video", 1)
+        assert result == {"enabled": True, "track_type": "video", "index": 1}
+
+    def test_track_enable_set(self, mock_resolve):
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = track_enable_impl("video", 1, enabled=False)
+        assert result == {"set": True, "enabled": False, "track_type": "video", "index": 1}
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.SetTrackEnable.assert_called_once_with("video", 1, False)
+
+    def test_track_enable_set_failure(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.SetTrackEnable.return_value = False
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError),
+        ):
+            track_enable_impl("video", 1, enabled=False)
+
+    def test_track_enable_invalid_type(self):
+        with pytest.raises(ValidationError):
+            track_enable_impl("invalid", 1)
+
+    def test_track_lock_get(self, mock_resolve):
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = track_lock_impl("video", 1)
+        assert result == {"locked": False, "track_type": "video", "index": 1}
+
+    def test_track_lock_set(self, mock_resolve):
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = track_lock_impl("video", 1, locked=True)
+        assert result == {"set": True, "locked": True, "track_type": "video", "index": 1}
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.SetTrackLock.assert_called_once_with("video", 1, True)
+
+    def test_track_lock_set_failure(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.SetTrackLock.return_value = False
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError),
+        ):
+            track_lock_impl("video", 1, locked=True)
+
+    def test_track_lock_invalid_type(self):
+        with pytest.raises(ValidationError):
+            track_lock_impl("invalid", 1)
 
 
 class TestTimelineCLI:

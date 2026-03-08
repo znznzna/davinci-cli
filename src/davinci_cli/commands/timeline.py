@@ -161,6 +161,32 @@ class TrackDeleteInput(BaseModel):
     index: int
 
 
+class TrackEnableOutput(BaseModel):
+    enabled: bool | None = None
+    track_type: str | None = None
+    index: int | None = None
+    set: bool | None = None
+
+
+class TrackEnableInput(BaseModel):
+    track_type: str
+    index: int
+    enabled: bool | None = None
+
+
+class TrackLockOutput(BaseModel):
+    locked: bool | None = None
+    track_type: str | None = None
+    index: int | None = None
+    set: bool | None = None
+
+
+class TrackLockInput(BaseModel):
+    track_type: str
+    index: int
+    locked: bool | None = None
+
+
 class CurrentItemOutput(BaseModel):
     name: str | None = None
 
@@ -462,6 +488,48 @@ def track_delete_impl(
     return {"deleted": True, "track_type": track_type, "index": index}
 
 
+def track_enable_impl(
+    track_type: str, index: int, enabled: bool | None = None
+) -> dict:
+    """トラックの有効/無効を取得または設定する。"""
+    if track_type not in _VALID_TRACK_TYPES:
+        raise ValidationError(
+            field="track_type",
+            reason=f"Invalid: {track_type}. Valid: {', '.join(sorted(_VALID_TRACK_TYPES))}",
+        )
+    tl = _get_current_timeline()
+    if enabled is None:
+        val = tl.GetIsTrackEnabled(track_type, index)
+        return {"enabled": val, "track_type": track_type, "index": index}
+    result = tl.SetTrackEnable(track_type, index, enabled)
+    if result is False:
+        raise ValidationError(
+            field="enabled", reason="Failed to set track enable"
+        )
+    return {"set": True, "enabled": enabled, "track_type": track_type, "index": index}
+
+
+def track_lock_impl(
+    track_type: str, index: int, locked: bool | None = None
+) -> dict:
+    """トラックのロック状態を取得または設定する。"""
+    if track_type not in _VALID_TRACK_TYPES:
+        raise ValidationError(
+            field="track_type",
+            reason=f"Invalid: {track_type}. Valid: {', '.join(sorted(_VALID_TRACK_TYPES))}",
+        )
+    tl = _get_current_timeline()
+    if locked is None:
+        val = tl.GetIsTrackLocked(track_type, index)
+        return {"locked": val, "track_type": track_type, "index": index}
+    result = tl.SetTrackLock(track_type, index, locked)
+    if result is False:
+        raise ValidationError(
+            field="locked", reason="Failed to set track lock"
+        )
+    return {"set": True, "locked": locked, "track_type": track_type, "index": index}
+
+
 def current_item_impl() -> dict:
     tl = _get_current_timeline()
     item = tl.GetCurrentVideoItem()
@@ -659,6 +727,56 @@ def track_delete_cmd(
     output(result, pretty=ctx.obj.get("pretty"))
 
 
+@timeline_track.command(name="enable")
+@click.option("--track-type", required=True, help="Track type: video, audio, subtitle")
+@click.option("--index", required=True, type=int, help="Track index (1-based)")
+@click.option("--value", type=bool, default=None, help="Set enabled state (omit to get)")
+@json_input_option
+@click.pass_context
+def track_enable_cmd(
+    ctx: click.Context,
+    track_type: str | None,
+    index: int | None,
+    value: bool | None,
+    json_input: dict | None,
+) -> None:
+    """トラック有効/無効の取得・設定。"""
+    if json_input:
+        data = TrackEnableInput.model_validate(json_input)
+        track_type = data.track_type
+        index = data.index
+        value = data.enabled
+    if not track_type or index is None:
+        raise click.UsageError("--track-type and --index (or --json) are required")
+    result = track_enable_impl(track_type=track_type, index=index, enabled=value)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@timeline_track.command(name="lock")
+@click.option("--track-type", required=True, help="Track type: video, audio, subtitle")
+@click.option("--index", required=True, type=int, help="Track index (1-based)")
+@click.option("--value", type=bool, default=None, help="Set locked state (omit to get)")
+@json_input_option
+@click.pass_context
+def track_lock_cmd(
+    ctx: click.Context,
+    track_type: str | None,
+    index: int | None,
+    value: bool | None,
+    json_input: dict | None,
+) -> None:
+    """トラックロック状態の取得・設定。"""
+    if json_input:
+        data = TrackLockInput.model_validate(json_input)
+        track_type = data.track_type
+        index = data.index
+        value = data.locked
+    if not track_type or index is None:
+        raise click.UsageError("--track-type and --index (or --json) are required")
+    result = track_lock_impl(track_type=track_type, index=index, locked=value)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
 @timeline.group(name="marker")
 def timeline_marker() -> None:
     """Marker operations."""
@@ -755,4 +873,14 @@ register_schema(
     "timeline.track.delete",
     output_model=TrackDeleteOutput,
     input_model=TrackDeleteInput,
+)
+register_schema(
+    "timeline.track.enable",
+    output_model=TrackEnableOutput,
+    input_model=TrackEnableInput,
+)
+register_schema(
+    "timeline.track.lock",
+    output_model=TrackLockOutput,
+    input_model=TrackLockInput,
 )
