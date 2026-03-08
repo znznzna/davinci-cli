@@ -8,6 +8,8 @@ from davinci_cli.cli import dr
 from davinci_cli.commands.system import (
     edition_impl,
     info_impl,
+    keyframe_mode_get_impl,
+    keyframe_mode_set_impl,
     page_get_impl,
     page_set_impl,
     ping_impl,
@@ -95,6 +97,29 @@ class TestPageImpl:
     def test_page_set_invalid(self):
         with pytest.raises(ValidationError):
             page_set_impl("invalid")
+
+
+class TestKeyframeModeImpl:
+    def test_keyframe_mode_get(self, mock_resolve):
+        mock_resolve.GetKeyframeMode.return_value = 0
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = keyframe_mode_get_impl()
+        assert result == {"mode": 0, "label": "all"}
+
+    def test_keyframe_mode_set_dry_run(self):
+        result = keyframe_mode_set_impl(1, dry_run=True)
+        assert result == {"dry_run": True, "action": "keyframe_mode_set", "mode": 1}
+
+    def test_keyframe_mode_set(self, mock_resolve):
+        mock_resolve.SetKeyframeMode.return_value = True
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = keyframe_mode_set_impl(1)
+        assert result == {"set": True, "mode": 1, "label": "color"}
+        mock_resolve.SetKeyframeMode.assert_called_once_with(1)
+
+    def test_keyframe_mode_set_invalid(self):
+        with pytest.raises(ValidationError):
+            keyframe_mode_set_impl(5)
 
 
 class TestSystemCLI:
