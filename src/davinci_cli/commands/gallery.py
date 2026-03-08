@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from davinci_cli.core.connection import get_resolve
 from davinci_cli.core.exceptions import ProjectNotOpenError, ValidationError
+from davinci_cli.core.validation import validate_path
 from davinci_cli.decorators import dry_run_option
 from davinci_cli.output.formatter import output
 from davinci_cli.schema_registry import register_schema
@@ -42,6 +43,42 @@ class AlbumCreateOutput(BaseModel):
     action: str | None = None
 
 
+class StillExportInput(BaseModel):
+    folder_path: str
+    file_prefix: str = "still"
+    format: str = "dpx"
+
+
+class StillExportOutput(BaseModel):
+    exported: int | None = None
+    folder_path: str | None = None
+    format: str | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class StillImportInput(BaseModel):
+    paths: list[str]
+
+
+class StillImportOutput(BaseModel):
+    imported: bool | None = None
+    paths: list[str] | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class StillDeleteInput(BaseModel):
+    still_indices: list[int]
+
+
+class StillDeleteOutput(BaseModel):
+    deleted: int | None = None
+    still_indices: list[int] | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+
 # --- Helper ---
 
 
@@ -55,6 +92,15 @@ def _get_gallery() -> Any:
     if not gallery:
         raise ValidationError(field="gallery", reason="Gallery not available")
     return gallery
+
+
+def _get_current_album() -> tuple[Any, Any]:
+    """Returns (gallery, album) tuple."""
+    gallery = _get_gallery()
+    album = gallery.GetCurrentStillAlbum()
+    if not album:
+        raise ValidationError(field="album", reason="No current still album")
+    return gallery, album
 
 
 # --- _impl Functions ---
@@ -106,6 +152,72 @@ def gallery_album_create_impl(dry_run: bool = False) -> dict:
     return {"created": True, "name": name}
 
 
+def gallery_still_export_impl(
+    folder_path: str,
+    file_prefix: str = "still",
+    format: str = "dpx",
+    dry_run: bool = False,
+) -> dict:
+    validated = validate_path(folder_path)
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "still_export",
+            "folder_path": str(validated),
+            "format": format,
+        }
+    _gallery, album = _get_current_album()
+    stills = album.GetStills() or []
+    if not stills:
+        return {"exported": 0, "folder_path": str(validated)}
+    result = album.ExportStills(stills, str(validated), file_prefix, format)
+    if result is False:
+        raise ValidationError(field="folder_path", reason="Failed to export stills")
+    return {"exported": len(stills), "folder_path": str(validated), "format": format}
+
+
+def gallery_still_import_impl(
+    paths: list[str],
+    dry_run: bool = False,
+) -> dict:
+    validated_paths = [str(validate_path(p)) for p in paths]
+    if dry_run:
+        return {"dry_run": True, "action": "still_import", "paths": validated_paths}
+    _gallery, album = _get_current_album()
+    result = album.ImportStills(validated_paths)
+    if result is False:
+        raise ValidationError(field="paths", reason="Failed to import stills")
+    return {"imported": True, "paths": validated_paths}
+
+
+def gallery_still_delete_impl(
+    still_indices: list[int],
+    dry_run: bool = False,
+) -> dict:
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "still_delete",
+            "still_indices": still_indices,
+        }
+    _gallery, album = _get_current_album()
+    stills = album.GetStills() or []
+    targets = []
+    for idx in still_indices:
+        if idx < 0 or idx >= len(stills):
+            raise ValidationError(
+                field="still_indices",
+                reason=f"Still index {idx} out of range (0..{len(stills) - 1})",
+            )
+        targets.append(stills[idx])
+    result = album.DeleteStills(targets)
+    if result is False:
+        raise ValidationError(
+            field="still_indices", reason="Failed to delete stills"
+        )
+    return {"deleted": len(targets), "still_indices": still_indices}
+
+
 # --- CLI Commands ---
 
 
@@ -154,6 +266,50 @@ def album_create_cmd(ctx: click.Context, dry_run: bool) -> None:
     output(result, pretty=ctx.obj.get("pretty"))
 
 
+@gallery.group(name="still")
+def gallery_still() -> None:
+    """Still operations."""
+
+
+@gallery_still.command(name="export")
+@click.argument("folder_path")
+@click.option("--file-prefix", default="still", help="File name prefix.")
+@click.option(
+    "--format", "fmt", default="dpx",
+    help="Export format (dpx, cin, tif, jpg, png, ppm, bmp, xpm, drx).",
+)
+@dry_run_option
+@click.pass_context
+def still_export_cmd(
+    ctx: click.Context, folder_path: str, file_prefix: str, fmt: str, dry_run: bool,
+) -> None:
+    """スチルをエクスポートする。"""
+    result = gallery_still_export_impl(
+        folder_path=folder_path, file_prefix=file_prefix, format=fmt, dry_run=dry_run
+    )
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@gallery_still.command(name="import")
+@click.argument("paths", nargs=-1, required=True)
+@dry_run_option
+@click.pass_context
+def still_import_cmd(ctx: click.Context, paths: tuple[str, ...], dry_run: bool) -> None:
+    """スチルをインポートする。"""
+    result = gallery_still_import_impl(paths=list(paths), dry_run=dry_run)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@gallery_still.command(name="delete")
+@click.argument("still_indices", nargs=-1, required=True, type=int)
+@dry_run_option
+@click.pass_context
+def still_delete_cmd(ctx: click.Context, still_indices: tuple[int, ...], dry_run: bool) -> None:
+    """スチルを削除する。"""
+    result = gallery_still_delete_impl(still_indices=list(still_indices), dry_run=dry_run)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
 # --- Schema Registration ---
 
 register_schema("gallery.album.list", output_model=AlbumInfo)
@@ -164,3 +320,18 @@ register_schema(
     input_model=AlbumSetInput,
 )
 register_schema("gallery.album.create", output_model=AlbumCreateOutput)
+register_schema(
+    "gallery.still.export",
+    output_model=StillExportOutput,
+    input_model=StillExportInput,
+)
+register_schema(
+    "gallery.still.import",
+    output_model=StillImportOutput,
+    input_model=StillImportInput,
+)
+register_schema(
+    "gallery.still.delete",
+    output_model=StillDeleteOutput,
+    input_model=StillDeleteInput,
+)

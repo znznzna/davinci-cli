@@ -10,6 +10,9 @@ from davinci_cli.commands.gallery import (
     gallery_album_current_impl,
     gallery_album_list_impl,
     gallery_album_set_impl,
+    gallery_still_delete_impl,
+    gallery_still_export_impl,
+    gallery_still_import_impl,
 )
 from davinci_cli.core.exceptions import ValidationError
 
@@ -42,6 +45,14 @@ def mock_resolve():
         id(new_album): "Album 3",
     }.get(id(a), "Unknown")
 
+    # Stills
+    still1 = MagicMock(name="still1_obj")
+    still2 = MagicMock(name="still2_obj")
+    album1.GetStills.return_value = [still1, still2]
+    album1.ExportStills.return_value = True
+    album1.ImportStills.return_value = True
+    album1.DeleteStills.return_value = True
+
     project.GetGallery.return_value = gallery
     pm.GetCurrentProject.return_value = project
     resolve.GetProjectManager.return_value = pm
@@ -51,6 +62,8 @@ def mock_resolve():
     resolve._album1 = album1
     resolve._album2 = album2
     resolve._new_album = new_album
+    resolve._still1 = still1
+    resolve._still2 = still2
     return resolve
 
 
@@ -132,6 +145,89 @@ class TestGalleryAlbumCreateImpl:
             gallery_album_create_impl()
 
 
+class TestGalleryStillExportImpl:
+    def test_still_export_dry_run(self):
+        result = gallery_still_export_impl(
+            folder_path="/tmp/stills", file_prefix="still", format="dpx", dry_run=True
+        )
+        assert result["dry_run"] is True
+        assert result["action"] == "still_export"
+        assert result["format"] == "dpx"
+
+    def test_still_export(self, mock_resolve):
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = gallery_still_export_impl(folder_path="/tmp/stills")
+        mock_resolve._album1.ExportStills.assert_called_once()
+        assert result["exported"] == 2
+        assert result["format"] == "dpx"
+
+    def test_still_export_empty(self, mock_resolve):
+        mock_resolve._album1.GetStills.return_value = []
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = gallery_still_export_impl(folder_path="/tmp/stills")
+        assert result["exported"] == 0
+
+    def test_still_export_failure(self, mock_resolve):
+        mock_resolve._album1.ExportStills.return_value = False
+        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
+            ValidationError, match="Failed to export stills"
+        ):
+            gallery_still_export_impl(folder_path="/tmp/stills")
+
+
+class TestGalleryStillImportImpl:
+    def test_still_import_dry_run(self):
+        result = gallery_still_import_impl(
+            paths=["/tmp/still1.dpx", "/tmp/still2.dpx"], dry_run=True
+        )
+        assert result["dry_run"] is True
+        assert result["action"] == "still_import"
+
+    def test_still_import(self, mock_resolve):
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = gallery_still_import_impl(
+                paths=["/tmp/still1.dpx", "/tmp/still2.dpx"]
+            )
+        mock_resolve._album1.ImportStills.assert_called_once()
+        assert result["imported"] is True
+
+    def test_still_import_failure(self, mock_resolve):
+        mock_resolve._album1.ImportStills.return_value = False
+        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
+            ValidationError, match="Failed to import stills"
+        ):
+            gallery_still_import_impl(paths=["/tmp/still1.dpx"])
+
+
+class TestGalleryStillDeleteImpl:
+    def test_still_delete_dry_run(self):
+        result = gallery_still_delete_impl(still_indices=[0, 1], dry_run=True)
+        assert result["dry_run"] is True
+        assert result["action"] == "still_delete"
+        assert result["still_indices"] == [0, 1]
+
+    def test_still_delete(self, mock_resolve):
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = gallery_still_delete_impl(still_indices=[0])
+        mock_resolve._album1.DeleteStills.assert_called_once_with(
+            [mock_resolve._still1]
+        )
+        assert result["deleted"] == 1
+
+    def test_still_delete_out_of_range(self, mock_resolve):
+        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
+            ValidationError, match="out of range"
+        ):
+            gallery_still_delete_impl(still_indices=[5])
+
+    def test_still_delete_failure(self, mock_resolve):
+        mock_resolve._album1.DeleteStills.return_value = False
+        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
+            ValidationError, match="Failed to delete stills"
+        ):
+            gallery_still_delete_impl(still_indices=[0])
+
+
 class TestGalleryCLI:
     def test_album_set_dry_run_cli(self):
         result = CliRunner().invoke(
@@ -151,3 +247,32 @@ class TestGalleryCLI:
         data = json.loads(result.output)
         assert data["dry_run"] is True
         assert data["action"] == "album_create"
+
+    def test_still_export_dry_run_cli(self):
+        result = CliRunner().invoke(
+            dr, ["gallery", "still", "export", "/tmp/stills", "--dry-run"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["dry_run"] is True
+        assert data["action"] == "still_export"
+
+    def test_still_import_dry_run_cli(self):
+        result = CliRunner().invoke(
+            dr,
+            ["gallery", "still", "import", "/tmp/s1.dpx", "/tmp/s2.dpx", "--dry-run"],
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["dry_run"] is True
+        assert data["action"] == "still_import"
+
+    def test_still_delete_dry_run_cli(self):
+        result = CliRunner().invoke(
+            dr, ["gallery", "still", "delete", "0", "1", "--dry-run"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["dry_run"] is True
+        assert data["action"] == "still_delete"
+        assert data["still_indices"] == [0, 1]
