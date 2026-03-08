@@ -343,10 +343,39 @@ def deliver_format_list_impl() -> dict:
 
 
 def deliver_codec_list_impl(format_name: str) -> dict:
-    """指定フォーマットのコーデック一覧を返す。"""
+    """指定フォーマットのコーデック一覧を返す。
+
+    format_name は表示名（"QuickTime"）または拡張子（".mov"）を受け付ける。
+    表示名で空が返る場合、GetRenderFormats() のキーから逆引きして再試行する。
+    """
     project = _get_current_project()
+
+    # まず直接試す
     codecs = project.GetRenderCodecs(format_name)
-    return {"format": format_name, "codecs": codecs or {}}
+    if codecs:
+        return {"format": format_name, "codecs": codecs}
+
+    # 空の場合、フォールバック検索
+    formats = project.GetRenderFormats() or {}
+
+    # format_name が表示名 → 拡張子を取得して再試行
+    if format_name in formats:
+        ext = formats[format_name]  # e.g. ".mov"
+        codecs = project.GetRenderCodecs(ext) or {}
+        if codecs:
+            return {"format": format_name, "codecs": codecs}
+        # 拡張子からドット除去して再試行（"mov"）
+        ext_no_dot = ext.lstrip(".")
+        codecs = project.GetRenderCodecs(ext_no_dot) or {}
+        return {"format": format_name, "codecs": codecs}
+
+    # format_name が拡張子の場合（".mov" or "mov"）→ 表示名を逆引き
+    for display_name, ext in formats.items():
+        if ext == format_name or ext.lstrip(".") == format_name:
+            codecs = project.GetRenderCodecs(display_name) or {}
+            return {"format": display_name, "codecs": codecs}
+
+    return {"format": format_name, "codecs": {}}
 
 
 def deliver_preset_import_impl(path: str, dry_run: bool = False) -> dict:

@@ -281,6 +281,61 @@ class TestDeliverFormatsImpl:
         assert result["codecs"] == {"Apple ProRes 422 HQ": "ap4h"}
         project.GetRenderCodecs.assert_called_once_with("QuickTime")
 
+    def test_codec_list_fallback_to_extension(self, mock_resolve):
+        """表示名で空 → 拡張子で再試行して成功するケース。"""
+        project = mock_resolve.GetProjectManager().GetCurrentProject()
+        project.GetRenderFormats.return_value = {"QuickTime": ".mov", "MP4": ".mp4"}
+
+        def mock_get_codecs(fmt):
+            if fmt == "QuickTime":
+                return {}
+            if fmt == ".mov":
+                return {"Apple ProRes 422": "apcn"}
+            return {}
+
+        project.GetRenderCodecs.side_effect = mock_get_codecs
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = deliver_codec_list_impl(format_name="QuickTime")
+        assert result["format"] == "QuickTime"
+        assert result["codecs"] == {"Apple ProRes 422": "apcn"}
+
+    def test_codec_list_fallback_no_dot_extension(self, mock_resolve):
+        """表示名で空 → 拡張子で空 → ドットなし拡張子で成功するケース。"""
+        project = mock_resolve.GetProjectManager().GetCurrentProject()
+        project.GetRenderFormats.return_value = {"QuickTime": ".mov"}
+
+        def mock_get_codecs(fmt):
+            if fmt == "mov":
+                return {"Apple ProRes 422": "apcn"}
+            return {}
+
+        project.GetRenderCodecs.side_effect = mock_get_codecs
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = deliver_codec_list_impl(format_name="QuickTime")
+        assert result["format"] == "QuickTime"
+        assert result["codecs"] == {"Apple ProRes 422": "apcn"}
+
+    def test_codec_list_direct_extension_input(self, mock_resolve):
+        """拡張子を直接渡すケース。"""
+        project = mock_resolve.GetProjectManager().GetCurrentProject()
+        project.GetRenderFormats.return_value = {"QuickTime": ".mov"}
+        project.GetRenderCodecs.side_effect = lambda fmt: (
+            {"Apple ProRes 422": "apcn"} if fmt == "QuickTime" else {}
+        )
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = deliver_codec_list_impl(format_name=".mov")
+        assert result["format"] == "QuickTime"
+        assert result["codecs"] == {"Apple ProRes 422": "apcn"}
+
+    def test_codec_list_all_fallbacks_fail(self, mock_resolve):
+        """全てのフォールバックが失敗した場合、空dictを返す。"""
+        project = mock_resolve.GetProjectManager().GetCurrentProject()
+        project.GetRenderFormats.return_value = {"QuickTime": ".mov"}
+        project.GetRenderCodecs.return_value = {}
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = deliver_codec_list_impl(format_name="Unknown")
+        assert result["codecs"] == {}
+
     def test_preset_import_dry_run(self, tmp_path):
         preset_file = tmp_path / "my_preset.xml"
         preset_file.write_text("<preset/>")
