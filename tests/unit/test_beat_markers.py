@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from davinci_cli.commands.beat_markers import _calculate_beat_frames, beat_marker_impl
+from davinci_cli.core.exceptions import ProjectNotOpenError, ValidationError
 
 RESOLVE_PATCH = "davinci_cli.commands.beat_markers.get_resolve"
 
@@ -172,3 +173,63 @@ class TestBeatMarkerImplExecute:
         timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
         first_call = timeline.AddMarker.call_args_list[0]
         assert first_call[0][4] == 5
+
+
+class TestBeatMarkerImplValidation:
+    def test_invalid_note_value_raises(self, mock_resolve):
+        """不正な音価で ValidationError"""
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            with pytest.raises(ValidationError, match="note_value"):
+                beat_marker_impl(bpm=120, note_value="1/3")
+
+    def test_bpm_too_low_raises(self, mock_resolve):
+        """BPM が下限未満で ValidationError"""
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            with pytest.raises(ValidationError, match="bpm"):
+                beat_marker_impl(bpm=10)
+
+    def test_bpm_too_high_raises(self, mock_resolve):
+        """BPM が上限超で ValidationError"""
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            with pytest.raises(ValidationError, match="bpm"):
+                beat_marker_impl(bpm=400)
+
+    def test_bpm_zero_raises(self, mock_resolve):
+        """BPM 0 で ValidationError"""
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            with pytest.raises(ValidationError, match="bpm"):
+                beat_marker_impl(bpm=0)
+
+    def test_bpm_boundary_low_valid(self, mock_resolve):
+        """BPM 20.0（下限）は有効"""
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = beat_marker_impl(bpm=20.0, dry_run=True)
+        assert result["bpm"] == 20.0
+
+    def test_bpm_boundary_high_valid(self, mock_resolve):
+        """BPM 300.0（上限）は有効"""
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = beat_marker_impl(bpm=300.0, dry_run=True)
+        assert result["bpm"] == 300.0
+
+    def test_no_timeline_raises(self):
+        """タイムラインなしで ProjectNotOpenError"""
+        resolve = MagicMock()
+        pm = MagicMock()
+        project = MagicMock()
+        project.GetCurrentTimeline.return_value = None
+        pm.GetCurrentProject.return_value = project
+        resolve.GetProjectManager.return_value = pm
+        with patch(RESOLVE_PATCH, return_value=resolve):
+            with pytest.raises(ProjectNotOpenError):
+                beat_marker_impl(bpm=120)
+
+    def test_no_project_raises(self):
+        """プロジェクトなしで ProjectNotOpenError"""
+        resolve = MagicMock()
+        pm = MagicMock()
+        pm.GetCurrentProject.return_value = None
+        resolve.GetProjectManager.return_value = pm
+        with patch(RESOLVE_PATCH, return_value=resolve):
+            with pytest.raises(ProjectNotOpenError):
+                beat_marker_impl(bpm=120)
