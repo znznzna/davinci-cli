@@ -302,6 +302,34 @@ class TestBeatMarkerCLI:
 # --- MCP Tests ---
 
 
+from davinci_cli.schema_registry import SCHEMA_REGISTRY
+
+
+class TestBeatMarkerSchema:
+    def test_schema_registered(self):
+        """timeline.marker.beats がスキーマレジストリに登録されている"""
+        assert "timeline.marker.beats" in SCHEMA_REGISTRY
+
+    def test_schema_has_input_and_output(self):
+        """入出力モデルが両方登録されている"""
+        input_model, output_model = SCHEMA_REGISTRY["timeline.marker.beats"]
+        assert input_model is not None
+        assert output_model is not None
+
+    def test_input_schema_has_bpm(self):
+        """入力スキーマに bpm フィールドがある"""
+        input_model, _ = SCHEMA_REGISTRY["timeline.marker.beats"]
+        schema = input_model.model_json_schema()
+        assert "bpm" in schema["properties"]
+        assert "bpm" in schema["required"]
+
+    def test_output_schema_has_added_count(self):
+        """出力スキーマに added_count フィールドがある"""
+        _, output_model = SCHEMA_REGISTRY["timeline.marker.beats"]
+        schema = output_model.model_json_schema()
+        assert "added_count" in schema["properties"]
+
+
 class TestBeatMarkerMCP:
     def test_mcp_tool_registered(self):
         """MCP ツールとして timeline_marker_beats が登録されている"""

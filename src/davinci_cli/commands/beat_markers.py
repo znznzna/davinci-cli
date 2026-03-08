@@ -189,3 +189,14 @@ def beat_marker_cmd(
         dry_run=dry_run,
     )
     output(result, pretty=ctx.obj.get("pretty"))
+
+
+from davinci_cli.schema_registry import register_schema
+
+# --- Schema Registration ---
+
+register_schema(
+    "timeline.marker.beats",
+    output_model=BeatMarkerOutput,
+    input_model=BeatMarkerInput,
+)
