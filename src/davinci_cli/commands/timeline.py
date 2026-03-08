@@ -930,6 +930,11 @@ def marker_delete_cmd(
     output(result, pretty=ctx.obj.get("pretty"))
 
 
+from davinci_cli.commands.beat_markers import beat_marker_cmd
+
+timeline_marker.add_command(beat_marker_cmd)
+
+
 # --- Schema Registration ---
 
 register_schema("timeline.list", output_model=TimelineListItem)

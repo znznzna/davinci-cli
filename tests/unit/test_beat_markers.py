@@ -233,3 +233,67 @@ class TestBeatMarkerImplValidation:
         with patch(RESOLVE_PATCH, return_value=resolve):
             with pytest.raises(ProjectNotOpenError):
                 beat_marker_impl(bpm=120)
+
+
+# --- CLI Tests ---
+
+import json
+
+from click.testing import CliRunner
+
+from davinci_cli.cli import dr
+
+
+class TestBeatMarkerCLI:
+    def test_beats_dry_run_json_input(self):
+        """dr timeline marker beats --json '{"bpm": 120}' --dry-run"""
+        result = CliRunner().invoke(
+            dr,
+            [
+                "timeline", "marker", "beats",
+                "--json", '{"bpm": 120}',
+                "--dry-run",
+            ],
+        )
+        # dry-run のバリデーションは通るが、Resolve 接続でエラーになる可能性がある
+        # ただし mock_resolve を使うテストは別に用意する
+        assert result.exit_code == 0 or "not running" in result.output.lower()
+
+    def test_beats_dry_run_with_mock(self, mock_resolve):
+        """mock付きで dry-run が正しく動作"""
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = CliRunner().invoke(
+                dr,
+                [
+                    "timeline", "marker", "beats",
+                    "--json", '{"bpm": 120, "note_value": "1/8"}',
+                    "--dry-run",
+                ],
+            )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["dry_run"] is True
+        assert data["bpm"] == 120
+        assert data["note_value"] == "1/8"
+
+    def test_beats_requires_json(self):
+        """--json なしでエラー"""
+        result = CliRunner().invoke(
+            dr, ["timeline", "marker", "beats"]
+        )
+        assert result.exit_code != 0
+
+    def test_beats_custom_options(self, mock_resolve):
+        """カスタムオプション付き dry-run"""
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = CliRunner().invoke(
+                dr,
+                [
+                    "timeline", "marker", "beats",
+                    "--json", '{"bpm": 90, "note_value": "1/2", "color": "Red", "name": "Beat"}',
+                    "--dry-run",
+                ],
+            )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["color"] == "Red"

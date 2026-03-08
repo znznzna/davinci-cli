@@ -9,8 +9,12 @@ from typing import Any
 
 from pydantic import BaseModel
 
+import click
+
 from davinci_cli.core.connection import get_resolve
 from davinci_cli.core.exceptions import ProjectNotOpenError, ValidationError
+from davinci_cli.decorators import dry_run_option, json_input_option
+from davinci_cli.output.formatter import output
 
 # 音価 → 1拍あたりの倍率マッピング
 NOTE_VALUE_MAP: dict[str, float] = {
@@ -158,3 +162,30 @@ def beat_marker_impl(
         "color": color,
         "frames": frames,
     }
+
+
+# --- CLI Command ---
+
+
+@click.command(name="beats")
+@json_input_option
+@dry_run_option
+@click.pass_context
+def beat_marker_cmd(
+    ctx: click.Context,
+    json_input: dict | None,
+    dry_run: bool,
+) -> None:
+    """BPMベースのマーカー自動配置。"""
+    if not json_input:
+        raise click.UsageError("--json is required")
+    data = BeatMarkerInput.model_validate(json_input)
+    result = beat_marker_impl(
+        bpm=data.bpm,
+        note_value=data.note_value,
+        color=data.color,
+        name=data.name,
+        duration=data.duration,
+        dry_run=dry_run,
+    )
+    output(result, pretty=ctx.obj.get("pretty"))
