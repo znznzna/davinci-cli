@@ -9,8 +9,12 @@ from davinci_cli.commands.media import (
     folder_create_impl,
     folder_delete_impl,
     folder_list_impl,
+    media_delete_impl,
     media_import_impl,
     media_list_impl,
+    media_move_impl,
+    media_relink_impl,
+    media_unlink_impl,
 )
 from davinci_cli.core.exceptions import ValidationError
 
@@ -37,6 +41,7 @@ def mock_resolve():
 
     media_pool = MagicMock()
     media_pool.GetRootFolder.return_value = root_folder
+    media_pool.GetCurrentFolder.return_value = root_folder
     media_pool.ImportMedia.return_value = [clip]
 
     project.GetMediaPool.return_value = media_pool
@@ -96,6 +101,85 @@ class TestFolderImpl:
     def test_folder_delete_dry_run(self):
         result = folder_delete_impl(name="old_folder", dry_run=True)
         assert result["dry_run"] is True
+
+
+class TestMediaExtendedImpl:
+    def test_media_move_dry_run(self):
+        result = media_move_impl(
+            clip_names=["clip1.mov"], target_folder="VFX", dry_run=True
+        )
+        assert result["dry_run"] is True
+        assert result["action"] == "media_move"
+
+    def test_media_move(self, mock_resolve):
+        # Add a target subfolder to root
+        target = MagicMock()
+        target.GetName.return_value = "VFX"
+        root = mock_resolve.GetProjectManager().GetCurrentProject().GetMediaPool().GetRootFolder()
+        root.GetSubFolderList.return_value = [target]
+        media_pool = mock_resolve.GetProjectManager().GetCurrentProject().GetMediaPool()
+        media_pool.MoveClips.return_value = True
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = media_move_impl(
+                clip_names=["clip1.mov"], target_folder="VFX"
+            )
+        assert result["moved_count"] == 1
+        media_pool.MoveClips.assert_called_once()
+
+    def test_media_move_clip_not_found(self, mock_resolve):
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="not found"),
+        ):
+            media_move_impl(clip_names=["nonexistent.mov"], target_folder="VFX")
+
+    def test_media_delete_dry_run(self):
+        result = media_delete_impl(clip_names=["clip1.mov"], dry_run=True)
+        assert result["dry_run"] is True
+        assert result["action"] == "media_delete"
+
+    def test_media_delete(self, mock_resolve):
+        media_pool = mock_resolve.GetProjectManager().GetCurrentProject().GetMediaPool()
+        media_pool.DeleteClips.return_value = True
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = media_delete_impl(clip_names=["clip1.mov"])
+        assert result["deleted_count"] == 1
+        media_pool.DeleteClips.assert_called_once()
+
+    def test_media_relink_dry_run(self):
+        result = media_relink_impl(
+            clip_names=["clip1.mov"], folder_path="/media/new", dry_run=True
+        )
+        assert result["dry_run"] is True
+        assert result["action"] == "media_relink"
+
+    def test_media_relink(self, mock_resolve, tmp_path):
+        media_pool = mock_resolve.GetProjectManager().GetCurrentProject().GetMediaPool()
+        media_pool.RelinkClips.return_value = True
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = media_relink_impl(
+                clip_names=["clip1.mov"], folder_path=str(tmp_path)
+            )
+        assert result["relinked_count"] == 1
+        media_pool.RelinkClips.assert_called_once()
+
+    def test_media_relink_path_traversal(self):
+        with pytest.raises(ValidationError, match="path traversal"):
+            media_relink_impl(
+                clip_names=["clip1.mov"], folder_path="../../../etc"
+            )
+
+    def test_media_unlink(self, mock_resolve):
+        media_pool = mock_resolve.GetProjectManager().GetCurrentProject().GetMediaPool()
+        media_pool.UnlinkClips.return_value = True
+
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = media_unlink_impl(clip_names=["clip1.mov"])
+        assert result["unlinked_count"] == 1
+        media_pool.UnlinkClips.assert_called_once()
 
 
 class TestMediaCLI:

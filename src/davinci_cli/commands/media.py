@@ -59,6 +59,52 @@ class FolderDeleteInput(BaseModel):
     name: str
 
 
+class MediaMoveInput(BaseModel):
+    clip_names: list[str]
+    target_folder: str
+
+
+class MediaMoveOutput(BaseModel):
+    moved_count: int | None = None
+    clip_names: list[str] | None = None
+    target_folder: str | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class MediaDeleteInput(BaseModel):
+    clip_names: list[str]
+
+
+class MediaDeleteOutput(BaseModel):
+    deleted_count: int | None = None
+    clip_names: list[str] | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class MediaRelinkInput(BaseModel):
+    clip_names: list[str]
+    folder_path: str
+
+
+class MediaRelinkOutput(BaseModel):
+    relinked_count: int | None = None
+    clip_names: list[str] | None = None
+    folder_path: str | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class MediaUnlinkInput(BaseModel):
+    clip_names: list[str]
+
+
+class MediaUnlinkOutput(BaseModel):
+    unlinked_count: int
+    clip_names: list[str]
+
+
 # --- Helper ---
 
 
@@ -79,6 +125,22 @@ def _find_folder_by_name(root_folder: Any, name: str) -> Any:
         if found:
             return found
     return None
+
+
+def _find_clips_by_names(media_pool: Any, clip_names: list[str]) -> list[Any]:
+    """現在のフォルダからクリップ名でクリップを検索する。"""
+    folder = media_pool.GetCurrentFolder()
+    clips = folder.GetClipList() or []
+    clip_map = {c.GetName(): c for c in clips}
+    found: list[Any] = []
+    for name in clip_names:
+        if name not in clip_map:
+            raise ValidationError(
+                field="clip_names",
+                reason=f"Clip not found: {name}",
+            )
+        found.append(clip_map[name])
+    return found
 
 
 # --- _impl Functions ---
@@ -171,6 +233,86 @@ def folder_delete_impl(name: str, dry_run: bool = False) -> dict:
     return {"deleted": name}
 
 
+def media_move_impl(
+    clip_names: list[str],
+    target_folder: str,
+    dry_run: bool = False,
+) -> dict:
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "media_move",
+            "clip_names": clip_names,
+            "target_folder": target_folder,
+        }
+    media_pool = _get_media_pool()
+    clips = _find_clips_by_names(media_pool, clip_names)
+    target = _find_folder_by_name(media_pool.GetRootFolder(), target_folder)
+    if not target:
+        raise ValidationError(
+            field="target_folder",
+            reason=f"Folder not found: {target_folder}",
+        )
+    media_pool.MoveClips(clips, target)
+    return {
+        "moved_count": len(clips),
+        "clip_names": clip_names,
+        "target_folder": target_folder,
+    }
+
+
+def media_delete_impl(
+    clip_names: list[str],
+    dry_run: bool = False,
+) -> dict:
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "media_delete",
+            "clip_names": clip_names,
+        }
+    media_pool = _get_media_pool()
+    clips = _find_clips_by_names(media_pool, clip_names)
+    media_pool.DeleteClips(clips)
+    return {
+        "deleted_count": len(clips),
+        "clip_names": clip_names,
+    }
+
+
+def media_relink_impl(
+    clip_names: list[str],
+    folder_path: str,
+    dry_run: bool = False,
+) -> dict:
+    validated_path = str(validate_path(folder_path))
+    if dry_run:
+        return {
+            "dry_run": True,
+            "action": "media_relink",
+            "clip_names": clip_names,
+            "folder_path": validated_path,
+        }
+    media_pool = _get_media_pool()
+    clips = _find_clips_by_names(media_pool, clip_names)
+    media_pool.RelinkClips(clips, validated_path)
+    return {
+        "relinked_count": len(clips),
+        "clip_names": clip_names,
+        "folder_path": validated_path,
+    }
+
+
+def media_unlink_impl(clip_names: list[str]) -> dict:
+    media_pool = _get_media_pool()
+    clips = _find_clips_by_names(media_pool, clip_names)
+    media_pool.UnlinkClips(clips)
+    return {
+        "unlinked_count": len(clips),
+        "clip_names": clip_names,
+    }
+
+
 # --- CLI Commands ---
 
 
@@ -234,6 +376,60 @@ def folder_delete_cmd(
     output(result, pretty=ctx.obj.get("pretty"))
 
 
+@media.command(name="move")
+@click.argument("clip_names", nargs=-1, required=True)
+@click.option("--target", required=True, help="Target folder name")
+@dry_run_option
+@click.pass_context
+def media_move_cmd(
+    ctx: click.Context, clip_names: tuple[str, ...], target: str, dry_run: bool
+) -> None:
+    """クリップを別フォルダに移動。"""
+    result = media_move_impl(
+        clip_names=list(clip_names), target_folder=target, dry_run=dry_run
+    )
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@media.command(name="delete")
+@click.argument("clip_names", nargs=-1, required=True)
+@dry_run_option
+@click.pass_context
+def media_delete_cmd(
+    ctx: click.Context, clip_names: tuple[str, ...], dry_run: bool
+) -> None:
+    """クリップを削除。"""
+    result = media_delete_impl(clip_names=list(clip_names), dry_run=dry_run)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@media.command(name="relink")
+@click.argument("clip_names", nargs=-1, required=True)
+@click.option("--folder-path", required=True, help="Folder path to relink to")
+@dry_run_option
+@click.pass_context
+def media_relink_cmd(
+    ctx: click.Context,
+    clip_names: tuple[str, ...],
+    folder_path: str,
+    dry_run: bool,
+) -> None:
+    """クリップのメディアを再リンク。"""
+    result = media_relink_impl(
+        clip_names=list(clip_names), folder_path=folder_path, dry_run=dry_run
+    )
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@media.command(name="unlink")
+@click.argument("clip_names", nargs=-1, required=True)
+@click.pass_context
+def media_unlink_cmd(ctx: click.Context, clip_names: tuple[str, ...]) -> None:
+    """クリップのメディアリンクを解除。"""
+    result = media_unlink_impl(clip_names=list(clip_names))
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
 # --- Schema Registration ---
 
 register_schema("media.list", output_model=MediaItem)
@@ -252,4 +448,24 @@ register_schema(
     "media.folder.delete",
     output_model=FolderDeleteOutput,
     input_model=FolderDeleteInput,
+)
+register_schema(
+    "media.move",
+    output_model=MediaMoveOutput,
+    input_model=MediaMoveInput,
+)
+register_schema(
+    "media.delete",
+    output_model=MediaDeleteOutput,
+    input_model=MediaDeleteInput,
+)
+register_schema(
+    "media.relink",
+    output_model=MediaRelinkOutput,
+    input_model=MediaRelinkInput,
+)
+register_schema(
+    "media.unlink",
+    output_model=MediaUnlinkOutput,
+    input_model=MediaUnlinkInput,
 )
