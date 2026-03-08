@@ -6,9 +6,12 @@ from click.testing import CliRunner
 
 from davinci_cli.cli import dr
 from davinci_cli.commands.timeline import (
+    current_item_impl,
     marker_add_impl,
     marker_delete_impl,
     marker_list_impl,
+    timecode_get_impl,
+    timecode_set_impl,
     timeline_create_impl,
     timeline_current_impl,
     timeline_delete_impl,
@@ -139,6 +142,58 @@ class TestMarkerImpl:
     def test_marker_delete_dry_run(self):
         result = marker_delete_impl(frame_id=100, dry_run=True)
         assert result["dry_run"] is True
+
+
+class TestTimecodeImpl:
+    def test_timecode_get(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.GetCurrentTimecode.return_value = "01:00:00:00"
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = timecode_get_impl()
+        assert result == {"timecode": "01:00:00:00"}
+
+    def test_timecode_set_dry_run(self):
+        result = timecode_set_impl("01:00:05:00", dry_run=True)
+        assert result == {
+            "dry_run": True,
+            "action": "timecode_set",
+            "timecode": "01:00:05:00",
+        }
+
+    def test_timecode_set(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.SetCurrentTimecode.return_value = True
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = timecode_set_impl("01:00:05:00")
+        assert result == {"set": True, "timecode": "01:00:05:00"}
+        timeline.SetCurrentTimecode.assert_called_once_with("01:00:05:00")
+
+    def test_timecode_set_failure(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.SetCurrentTimecode.return_value = False
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError),
+        ):
+            timecode_set_impl("99:99:99:99")
+
+
+class TestCurrentItemImpl:
+    def test_current_item(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        item = MagicMock()
+        item.GetName.return_value = "Clip1"
+        timeline.GetCurrentVideoItem.return_value = item
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = current_item_impl()
+        assert result == {"name": "Clip1"}
+
+    def test_current_item_none(self, mock_resolve):
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.GetCurrentVideoItem.return_value = None
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = current_item_impl()
+        assert result == {"name": None}
 
 
 class TestTimelineCLI:

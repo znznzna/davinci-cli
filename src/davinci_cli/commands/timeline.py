@@ -114,6 +114,25 @@ class MarkerDeleteOutput(BaseModel):
     action: str | None = None
 
 
+class TimecodeGetOutput(BaseModel):
+    timecode: str
+
+
+class TimecodeSetOutput(BaseModel):
+    set: bool | None = None
+    timecode: str | None = None
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+class TimecodeSetInput(BaseModel):
+    timecode: str
+
+
+class CurrentItemOutput(BaseModel):
+    name: str | None = None
+
+
 # --- Helper ---
 
 
@@ -124,6 +143,14 @@ def _get_current_project() -> Any:
     if project is None:
         raise ProjectNotOpenError()
     return project
+
+
+def _get_current_timeline() -> Any:
+    project = _get_current_project()
+    tl = project.GetCurrentTimeline()
+    if not tl:
+        raise ProjectNotOpenError()
+    return tl
 
 
 def _get_timeline_by_name(project: Any, name: str) -> Any:
@@ -314,6 +341,31 @@ def marker_delete_impl(frame_id: int, dry_run: bool = False) -> dict:
     return {"deleted": True, "frame_id": frame_id}
 
 
+def timecode_get_impl() -> dict:
+    tl = _get_current_timeline()
+    return {"timecode": tl.GetCurrentTimecode()}
+
+
+def timecode_set_impl(timecode: str, dry_run: bool = False) -> dict:
+    if dry_run:
+        return {"dry_run": True, "action": "timecode_set", "timecode": timecode}
+    tl = _get_current_timeline()
+    result = tl.SetCurrentTimecode(timecode)
+    if result is False:
+        raise ValidationError(
+            field="timecode", reason=f"Failed to set timecode: {timecode}"
+        )
+    return {"set": True, "timecode": timecode}
+
+
+def current_item_impl() -> dict:
+    tl = _get_current_timeline()
+    item = tl.GetCurrentVideoItem()
+    if not item:
+        return {"name": None}
+    return {"name": item.GetName()}
+
+
 # --- CLI Commands ---
 
 
@@ -407,6 +459,37 @@ def timeline_export(
     output(result, pretty=ctx.obj.get("pretty"))
 
 
+@timeline.group(name="timecode")
+def timeline_timecode() -> None:
+    """Timecode operations."""
+
+
+@timeline_timecode.command(name="get")
+@click.pass_context
+def timecode_get_cmd(ctx: click.Context) -> None:
+    """現在のタイムコード取得。"""
+    result = timecode_get_impl()
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@timeline_timecode.command(name="set")
+@click.argument("timecode")
+@dry_run_option
+@click.pass_context
+def timecode_set_cmd(ctx: click.Context, timecode: str, dry_run: bool) -> None:
+    """タイムコード設定。"""
+    result = timecode_set_impl(timecode=timecode, dry_run=dry_run)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@timeline.command(name="current-item")
+@click.pass_context
+def current_item_cmd(ctx: click.Context) -> None:
+    """現在のビデオアイテム取得。"""
+    result = current_item_impl()
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
 @timeline.group(name="marker")
 def timeline_marker() -> None:
     """Marker operations."""
@@ -486,3 +569,10 @@ register_schema(
     input_model=MarkerAddInput,
 )
 register_schema("timeline.marker.delete", output_model=MarkerDeleteOutput)
+register_schema("timeline.timecode.get", output_model=TimecodeGetOutput)
+register_schema(
+    "timeline.timecode.set",
+    output_model=TimecodeSetOutput,
+    input_model=TimecodeSetInput,
+)
+register_schema("timeline.current-item", output_model=CurrentItemOutput)
