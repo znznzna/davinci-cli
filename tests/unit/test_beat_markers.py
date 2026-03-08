@@ -1,6 +1,32 @@
 """Beat markers — _calculate_beat_frames() 純粋関数テスト。"""
 
-from davinci_cli.commands.beat_markers import _calculate_beat_frames
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from davinci_cli.commands.beat_markers import _calculate_beat_frames, beat_marker_impl
+
+RESOLVE_PATCH = "davinci_cli.commands.beat_markers.get_resolve"
+
+
+@pytest.fixture
+def mock_resolve():
+    resolve = MagicMock()
+    pm = MagicMock()
+    project = MagicMock()
+
+    timeline = MagicMock()
+    timeline.GetName.return_value = "Main Edit"
+    timeline.GetSetting.side_effect = lambda k: {
+        "timelineFrameRate": "24",
+    }.get(k, "")
+    timeline.GetStartTimecode.return_value = "01:00:00:00"
+    timeline.GetEndFrame.return_value = 240  # 相対フレーム
+
+    project.GetCurrentTimeline.return_value = timeline
+    pm.GetCurrentProject.return_value = project
+    resolve.GetProjectManager.return_value = pm
+    return resolve
 
 
 class TestCalculateBeatFrames:
@@ -79,3 +105,27 @@ class TestCalculateBeatFrames:
         # seconds_per_beat = (60/90) * 2.0 = 1.333...
         # frames_per_beat = 1.333... * 24 = 32.0
         assert frames == [0, 32, 64, 96]
+
+
+class TestBeatMarkerImplDryRun:
+    def test_dry_run_returns_preview(self, mock_resolve):
+        """dry-run でフレーム一覧が返る"""
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = beat_marker_impl(bpm=120, note_value="1/4", dry_run=True)
+        assert result["dry_run"] is True
+        assert result["action"] == "marker_beats"
+        assert result["bpm"] == 120
+        assert result["note_value"] == "1/4"
+        assert result["color"] == "Blue"
+        assert isinstance(result["frames"], list)
+        assert result["count"] == len(result["frames"])
+
+    def test_dry_run_frame_values(self, mock_resolve):
+        """dry-run のフレーム値が正しい（開始TC=01:00:00:00, offset=86400）"""
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = beat_marker_impl(bpm=120, note_value="1/4", dry_run=True)
+        # offset=86400, end_frame_abs=86400+240=86640
+        # 12フレーム間隔: 86400, 86412, ..., 86640
+        assert result["frames"][0] == 86400
+        assert result["frames"][1] == 86412
+        assert result["count"] == 21
