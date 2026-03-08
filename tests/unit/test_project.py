@@ -174,6 +174,19 @@ class TestProjectCLI:
         result = CliRunner().invoke(dr, ["project", "open"])
         assert result.exit_code != 0
 
+    def test_project_create_json_input(self):
+        result = CliRunner().invoke(
+            dr, ["project", "create", "--json", '{"name": "NewProject"}', "--dry-run"]
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert data["dry_run"] is True
+        assert data["name"] == "NewProject"
+
+    def test_project_create_no_name_error(self):
+        result = CliRunner().invoke(dr, ["project", "create"])
+        assert result.exit_code != 0
+
     def test_project_info_with_fields(self, mock_resolve):
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = CliRunner().invoke(

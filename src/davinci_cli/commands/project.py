@@ -274,11 +274,22 @@ def project_close(ctx: click.Context, dry_run: bool) -> None:
 
 
 @project.command(name="create")
-@click.argument("name")
+@click.argument("name", required=False)
+@json_input_option
 @dry_run_option
 @click.pass_context
-def project_create_cmd(ctx: click.Context, name: str, dry_run: bool) -> None:
+def project_create_cmd(
+    ctx: click.Context,
+    name: str | None,
+    json_input: dict | None,
+    dry_run: bool,
+) -> None:
     """新規プロジェクト作成。"""
+    if json_input:
+        data = ProjectCreateInput.model_validate(json_input)
+        name = data.name
+    if not name:
+        raise click.UsageError("name is required (positional argument or --json)")
     result = project_create_impl(name=name, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
 
