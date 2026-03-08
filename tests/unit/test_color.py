@@ -8,12 +8,8 @@ from davinci_cli.cli import dr
 from davinci_cli.commands.color import (
     color_apply_lut_impl,
     color_copy_grade_impl,
-    color_paste_grade_impl,
     color_reset_impl,
-    node_add_impl,
-    node_delete_impl,
     node_list_impl,
-    still_apply_impl,
     still_grab_impl,
     still_list_impl,
 )
@@ -97,13 +93,6 @@ class TestColorGradeImpl:
             result = color_copy_grade_impl(from_index=0)
         assert result["copied_from"] == 0
 
-    def test_paste_grade_dry_run(self):
-        result = color_paste_grade_impl(to_index=3, dry_run=True)
-        assert result["dry_run"] is True
-
-    def test_paste_grade_raises_unsupported(self):
-        with pytest.raises(ValidationError):
-            color_paste_grade_impl(to_index=3, dry_run=False)
 
 
 class TestNodeImpl:
@@ -113,21 +102,6 @@ class TestNodeImpl:
         assert isinstance(result, list)
         assert len(result) == 3
 
-    def test_node_add_dry_run(self):
-        result = node_add_impl(clip_index=0, dry_run=True)
-        assert result["dry_run"] is True
-
-    def test_node_add_raises_unsupported(self):
-        with pytest.raises(ValidationError):
-            node_add_impl(clip_index=0, dry_run=False)
-
-    def test_node_delete_dry_run(self):
-        result = node_delete_impl(clip_index=0, node_index=1, dry_run=True)
-        assert result["dry_run"] is True
-
-    def test_node_delete_raises_unsupported(self):
-        with pytest.raises(ValidationError):
-            node_delete_impl(clip_index=0, node_index=1, dry_run=False)
 
 
 class TestStillImpl:
@@ -140,13 +114,6 @@ class TestStillImpl:
             result = still_list_impl()
         assert isinstance(result, list)
 
-    def test_still_apply_dry_run(self):
-        result = still_apply_impl(clip_index=0, still_index=0, dry_run=True)
-        assert result["dry_run"] is True
-
-    def test_still_apply_raises_unsupported(self):
-        with pytest.raises(ValidationError):
-            still_apply_impl(clip_index=0, still_index=0, dry_run=False)
 
 
 class TestColorCLI:

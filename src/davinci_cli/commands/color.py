@@ -48,31 +48,9 @@ class ColorCopyGradeOutput(BaseModel):
     copied_from: int
 
 
-class ColorPasteGradeOutput(BaseModel):
-    pasted_to: int | None = None
-    dry_run: bool | None = None
-    action: str | None = None
-    to_index: int | None = None
-
-
 class NodeInfo(BaseModel):
     index: int
     label: str | None = None
-
-
-class NodeAddOutput(BaseModel):
-    added: bool | None = None
-    clip_index: int | None = None
-    dry_run: bool | None = None
-    action: str | None = None
-
-
-class NodeDeleteOutput(BaseModel):
-    deleted: bool | None = None
-    clip_index: int | None = None
-    node_index: int | None = None
-    dry_run: bool | None = None
-    action: str | None = None
 
 
 class StillInfo(BaseModel):
@@ -83,14 +61,6 @@ class StillInfo(BaseModel):
 class StillGrabOutput(BaseModel):
     grabbed: bool | None = None
     clip_index: int | None = None
-    dry_run: bool | None = None
-    action: str | None = None
-
-
-class StillApplyOutput(BaseModel):
-    applied: bool | None = None
-    clip_index: int | None = None
-    still_index: int | None = None
     dry_run: bool | None = None
     action: str | None = None
 
@@ -173,16 +143,6 @@ def color_copy_grade_impl(from_index: int) -> dict:
     return {"copied_from": from_index}
 
 
-def color_paste_grade_impl(to_index: int, dry_run: bool = False) -> dict:
-    if dry_run:
-        return {"dry_run": True, "action": "paste_grade", "to_index": to_index}
-    raise ValidationError(
-        field="paste_grade",
-        reason="DaVinci Resolve API does not support pasting grades programmatically. "
-        "Use copy-grade to copy grades between clips via CopyGrades().",
-    )
-
-
 def node_list_impl(clip_index: int) -> list[dict]:
     tl = _get_current_timeline()
     clip_item = _get_clip_item_by_index(tl, clip_index)
@@ -192,31 +152,6 @@ def node_list_impl(clip_index: int) -> list[dict]:
         label = clip_item.GetNodeLabel(i)
         result.append({"index": i, "label": label or f"Node {i}"})
     return result
-
-
-def node_add_impl(clip_index: int, dry_run: bool = False) -> dict:
-    if dry_run:
-        return {"dry_run": True, "action": "node_add", "clip_index": clip_index}
-    raise ValidationError(
-        field="node_add",
-        reason="DaVinci Resolve API does not support adding nodes programmatically",
-    )
-
-
-def node_delete_impl(
-    clip_index: int, node_index: int, dry_run: bool = False
-) -> dict:
-    if dry_run:
-        return {
-            "dry_run": True,
-            "action": "node_delete",
-            "clip_index": clip_index,
-            "node_index": node_index,
-        }
-    raise ValidationError(
-        field="node_delete",
-        reason="DaVinci Resolve API does not support deleting nodes programmatically",
-    )
 
 
 def still_grab_impl(clip_index: int, dry_run: bool = False) -> dict:
@@ -251,24 +186,6 @@ def still_list_impl() -> list[dict]:
         label = label_fn() if label_fn else f"Still {i}"
         result.append({"index": i, "label": label})
     return result
-
-
-def still_apply_impl(
-    clip_index: int,
-    still_index: int,
-    dry_run: bool = False,
-) -> dict:
-    if dry_run:
-        return {
-            "dry_run": True,
-            "action": "still_apply",
-            "clip_index": clip_index,
-            "still_index": still_index,
-        }
-    raise ValidationError(
-        field="still_apply",
-        reason="DaVinci Resolve API does not support applying grades from stills programmatically",
-    )
 
 
 # --- CLI Commands ---
@@ -315,18 +232,6 @@ def copy_grade(ctx: click.Context, from_index: int) -> None:
     output(result, pretty=ctx.obj.get("pretty"))
 
 
-@color.command(name="paste-grade")
-@click.option("--to", "to_index", type=int, required=True)
-@dry_run_option
-@click.pass_context
-def paste_grade(
-    ctx: click.Context, to_index: int, dry_run: bool
-) -> None:
-    """グレードをペーストする。"""
-    result = color_paste_grade_impl(to_index=to_index, dry_run=dry_run)
-    output(result, pretty=ctx.obj.get("pretty"))
-
-
 @color.group(name="node")
 def color_node() -> None:
     """Node operations."""
@@ -338,33 +243,6 @@ def color_node() -> None:
 def node_list_cmd(ctx: click.Context, clip_index: int) -> None:
     """ノード一覧。"""
     result = node_list_impl(clip_index=clip_index)
-    output(result, pretty=ctx.obj.get("pretty"))
-
-
-@color_node.command(name="add")
-@click.argument("clip_index", type=int)
-@dry_run_option
-@click.pass_context
-def node_add_cmd(
-    ctx: click.Context, clip_index: int, dry_run: bool
-) -> None:
-    """ノード追加。"""
-    result = node_add_impl(clip_index=clip_index, dry_run=dry_run)
-    output(result, pretty=ctx.obj.get("pretty"))
-
-
-@color_node.command(name="delete")
-@click.argument("clip_index", type=int)
-@click.argument("node_index", type=int)
-@dry_run_option
-@click.pass_context
-def node_delete_cmd(
-    ctx: click.Context, clip_index: int, node_index: int, dry_run: bool
-) -> None:
-    """ノード削除。"""
-    result = node_delete_impl(
-        clip_index=clip_index, node_index=node_index, dry_run=dry_run
-    )
     output(result, pretty=ctx.obj.get("pretty"))
 
 
@@ -393,21 +271,6 @@ def still_list_cmd(ctx: click.Context) -> None:
     output(result, pretty=ctx.obj.get("pretty"))
 
 
-@color_still.command(name="apply")
-@click.argument("clip_index", type=int)
-@click.argument("still_index", type=int)
-@dry_run_option
-@click.pass_context
-def still_apply_cmd(
-    ctx: click.Context, clip_index: int, still_index: int, dry_run: bool
-) -> None:
-    """スチルを適用する。"""
-    result = still_apply_impl(
-        clip_index=clip_index, still_index=still_index, dry_run=dry_run
-    )
-    output(result, pretty=ctx.obj.get("pretty"))
-
-
 # --- Schema Registration ---
 
 register_schema(
@@ -417,10 +280,6 @@ register_schema(
 )
 register_schema("color.reset", output_model=ColorResetOutput)
 register_schema("color.copy-grade", output_model=ColorCopyGradeOutput)
-register_schema("color.paste-grade", output_model=ColorPasteGradeOutput)
 register_schema("color.node.list", output_model=NodeInfo)
-register_schema("color.node.add", output_model=NodeAddOutput)
-register_schema("color.node.delete", output_model=NodeDeleteOutput)
 register_schema("color.still.list", output_model=StillInfo)
 register_schema("color.still.grab", output_model=StillGrabOutput)
-register_schema("color.still.apply", output_model=StillApplyOutput)
