@@ -5,8 +5,15 @@ import pytest
 from click.testing import CliRunner
 
 from davinci_cli.cli import dr
-from davinci_cli.commands.system import edition_impl, info_impl, ping_impl, version_impl
-from davinci_cli.core.exceptions import ResolveNotRunningError
+from davinci_cli.commands.system import (
+    edition_impl,
+    info_impl,
+    page_get_impl,
+    page_set_impl,
+    ping_impl,
+    version_impl,
+)
+from davinci_cli.core.exceptions import ResolveNotRunningError, ValidationError
 
 RESOLVE_PATCH = "davinci_cli.commands.system.get_resolve"
 
@@ -66,6 +73,28 @@ class TestInfoImpl:
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = info_impl()
         assert result["current_project"] is None
+
+
+class TestPageImpl:
+    def test_page_get(self, mock_resolve):
+        mock_resolve.GetCurrentPage.return_value = "color"
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = page_get_impl()
+        assert result == {"page": "color"}
+
+    def test_page_set_dry_run(self):
+        result = page_set_impl("edit", dry_run=True)
+        assert result == {"dry_run": True, "action": "page_set", "page": "edit"}
+
+    def test_page_set(self, mock_resolve):
+        mock_resolve.OpenPage.return_value = True
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = page_set_impl("edit")
+        assert result == {"set": True, "page": "edit"}
+
+    def test_page_set_invalid(self):
+        with pytest.raises(ValidationError):
+            page_set_impl("invalid")
 
 
 class TestSystemCLI:

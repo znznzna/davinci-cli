@@ -7,10 +7,15 @@ Resolve 接続は core.connection を使用する。
 from __future__ import annotations
 
 import click
+from pydantic import BaseModel
 
 from davinci_cli.core.connection import get_resolve
 from davinci_cli.core.edition import get_edition
+from davinci_cli.core.exceptions import ValidationError
 from davinci_cli.output.formatter import output
+from davinci_cli.schema_registry import register_schema
+
+_VALID_PAGES = {"media", "cut", "edit", "fusion", "color", "fairlight", "deliver"}
 
 
 @click.group()
@@ -54,6 +59,28 @@ def info_impl() -> dict:
     }
 
 
+def page_get_impl() -> dict:
+    """現在のページを取得する。"""
+    resolve = get_resolve()
+    return {"page": resolve.GetCurrentPage()}
+
+
+def page_set_impl(page: str, dry_run: bool = False) -> dict:
+    """ページを切り替える。"""
+    if page not in _VALID_PAGES:
+        raise ValidationError(
+            field="page",
+            reason=f"Invalid page: {page}. Valid: {', '.join(sorted(_VALID_PAGES))}",
+        )
+    if dry_run:
+        return {"dry_run": True, "action": "page_set", "page": page}
+    resolve = get_resolve()
+    result = resolve.OpenPage(page)
+    if result is False:
+        raise ValidationError(field="page", reason=f"Failed to switch to page: {page}")
+    return {"set": True, "page": page}
+
+
 @system.command()
 @click.pass_context
 def ping(ctx: click.Context) -> None:
@@ -84,3 +111,46 @@ def info(ctx: click.Context) -> None:
     """総合情報（バージョン+エディション+現在プロジェクト）。"""
     result = info_impl()
     output(result, pretty=ctx.obj.get("pretty"))
+
+
+@system.group()
+def page() -> None:
+    """ページナビゲーション。"""
+
+
+@page.command(name="get")
+@click.pass_context
+def page_get(ctx: click.Context) -> None:
+    """現在のページを取得。"""
+    result = page_get_impl()
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+@page.command(name="set")
+@click.argument("page_name")
+@click.option("--dry-run", is_flag=True, default=False)
+@click.pass_context
+def page_set(ctx: click.Context, page_name: str, dry_run: bool) -> None:
+    """ページを切り替える。"""
+    result = page_set_impl(page_name, dry_run=dry_run)
+    output(result, pretty=ctx.obj.get("pretty"))
+
+
+# --- Pydantic models for schema registration ---
+
+
+class PageGetOutput(BaseModel):
+    page: str | None
+
+
+class PageSetOutput(BaseModel):
+    set: bool | None = None
+    page: str
+    dry_run: bool | None = None
+    action: str | None = None
+
+
+# --- Schema registration ---
+
+register_schema("system.page.get", output_model=PageGetOutput)
+register_schema("system.page.set", output_model=PageSetOutput)
