@@ -30,17 +30,35 @@ class TestGetEdition:
         mock_resolve.GetVersionString.return_value = "20.3.2.9"
         assert get_edition(mock_resolve) == EDITION_FREE
 
+    # --- GetProductName (v20+ 実機確認済み) ---
+
+    def test_detects_studio_from_product_name(self):
+        """GetProductName() で Studio を検出 (v20+ 推奨パス)"""
+        mock_resolve = MagicMock()
+        mock_resolve.GetProductName.return_value = "DaVinci Resolve Studio"
+        assert get_edition(mock_resolve) == EDITION_STUDIO
+
+    def test_detects_free_from_product_name(self):
+        """GetProductName() が Studio を含まない場合は Free"""
+        mock_resolve = MagicMock()
+        mock_resolve.GetProductName.return_value = "DaVinci Resolve"
+        mock_resolve.GetVersion.return_value = [20, 3, 2, 9, ""]
+        mock_resolve.GetVersionString.return_value = "20.3.2.9"
+        assert get_edition(mock_resolve) == EDITION_FREE
+
     # --- list 形式 (20.x 実機確認済み) ---
 
     def test_detects_studio_from_list(self):
         """GetVersion() が list で Studio suffix を含む場合"""
         mock_resolve = MagicMock()
+        mock_resolve.GetProductName.side_effect = AttributeError
         mock_resolve.GetVersion.return_value = [20, 3, 2, 9, "Studio"]
         assert get_edition(mock_resolve) == EDITION_STUDIO
 
     def test_detects_free_from_list(self):
         """GetVersion() が list で空 suffix の場合 (実機確認済み形式)"""
         mock_resolve = MagicMock()
+        mock_resolve.GetProductName.return_value = "DaVinci Resolve"
         mock_resolve.GetVersion.return_value = [20, 3, 2, 9, ""]
         mock_resolve.GetVersionString.return_value = "20.3.2.9"
         assert get_edition(mock_resolve) == EDITION_FREE

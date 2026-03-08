@@ -5,6 +5,7 @@ def build_mock_resolve():
     """E2Eテスト用の完全なResolveモック。"""
     resolve = MagicMock()
     resolve.GetVersionString.return_value = "19.0.0"
+    resolve.GetProductName.return_value = "DaVinci Resolve Studio"
     resolve.GetVersion.return_value = {
         "product": "DaVinci Resolve Studio",
         "major": 19,
@@ -32,7 +33,7 @@ def build_mock_resolve():
         }
     ]
     project.AddRenderJob.return_value = "job-002"
-    project.SaveProject.return_value = True
+    pm.SaveProject.return_value = True
 
     timeline = MagicMock()
     project.GetCurrentTimeline.return_value = timeline
@@ -49,7 +50,8 @@ def build_mock_resolve():
     clip.GetEnd.return_value = 240
     clip.GetDuration.return_value = 240
     clip.GetProperty.return_value = "0.0"
-    clip.GetNodeCount.return_value = 3
+    clip.GetNumNodes.return_value = 3
+    clip.GetNodeLabel.return_value = ""
     clip.GetClipProperty.side_effect = lambda k: {
         "File Path": "/media/clip1.mov",
         "Duration": "00:00:10:00",

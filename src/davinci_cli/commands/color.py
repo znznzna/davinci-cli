@@ -185,19 +185,21 @@ def color_paste_grade_impl(to_index: int, dry_run: bool = False) -> dict:
 def node_list_impl(clip_index: int) -> list[dict]:
     tl = _get_current_timeline()
     clip_item = _get_clip_item_by_index(tl, clip_index)
-    node_count = clip_item.GetNodeCount()
-    return [
-        {"index": i, "label": f"Node {i}"} for i in range(1, node_count + 1)
-    ]
+    node_count = clip_item.GetNumNodes()
+    result: list[dict] = []
+    for i in range(1, node_count + 1):
+        label = clip_item.GetNodeLabel(i)
+        result.append({"index": i, "label": label or f"Node {i}"})
+    return result
 
 
 def node_add_impl(clip_index: int, dry_run: bool = False) -> dict:
     if dry_run:
         return {"dry_run": True, "action": "node_add", "clip_index": clip_index}
-    tl = _get_current_timeline()
-    clip_item = _get_clip_item_by_index(tl, clip_index)
-    clip_item.AddNode()
-    return {"added": True, "clip_index": clip_index}
+    raise ValidationError(
+        field="node_add",
+        reason="DaVinci Resolve API does not support adding nodes programmatically",
+    )
 
 
 def node_delete_impl(
@@ -210,10 +212,10 @@ def node_delete_impl(
             "clip_index": clip_index,
             "node_index": node_index,
         }
-    tl = _get_current_timeline()
-    clip_item = _get_clip_item_by_index(tl, clip_index)
-    clip_item.DeleteNode(node_index)
-    return {"deleted": True, "clip_index": clip_index, "node_index": node_index}
+    raise ValidationError(
+        field="node_delete",
+        reason="DaVinci Resolve API does not support deleting nodes programmatically",
+    )
 
 
 def still_grab_impl(clip_index: int, dry_run: bool = False) -> dict:

@@ -12,7 +12,11 @@ import click
 from pydantic import BaseModel
 
 from davinci_cli.core.connection import get_resolve
-from davinci_cli.core.exceptions import ProjectNotFoundError, ProjectNotOpenError
+from davinci_cli.core.exceptions import (
+    ProjectNotFoundError,
+    ProjectNotOpenError,
+    ValidationError,
+)
 from davinci_cli.decorators import dry_run_option, fields_option, json_input_option
 from davinci_cli.output.formatter import output
 from davinci_cli.schema_registry import register_schema
@@ -161,8 +165,10 @@ def project_delete_impl(name: str, dry_run: bool = False) -> dict:
 
 
 def project_save_impl() -> dict:
-    project = _get_current_project()
-    project.SaveProject()
+    resolve = get_resolve()
+    pm = resolve.GetProjectManager()
+    if not pm.SaveProject():
+        raise ValidationError(field="save", reason="SaveProject failed")
     return {"saved": True}
 
 

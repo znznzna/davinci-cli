@@ -32,7 +32,8 @@ def mock_resolve():
     clip = MagicMock()
     clip.GetName.return_value = "A001_C001.mov"
     clip.GetProperty.return_value = "0.0"
-    clip.GetNodeCount.return_value = 3
+    clip.GetNumNodes.return_value = 3
+    clip.GetNodeLabel.return_value = ""
 
     timeline.GetTrackCount.return_value = 1
     timeline.GetItemListInTrack.return_value = [clip]
@@ -106,14 +107,23 @@ class TestNodeImpl:
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = node_list_impl(clip_index=0)
         assert isinstance(result, list)
+        assert len(result) == 3
 
     def test_node_add_dry_run(self):
         result = node_add_impl(clip_index=0, dry_run=True)
         assert result["dry_run"] is True
 
+    def test_node_add_raises_unsupported(self):
+        with pytest.raises(ValidationError):
+            node_add_impl(clip_index=0, dry_run=False)
+
     def test_node_delete_dry_run(self):
         result = node_delete_impl(clip_index=0, node_index=1, dry_run=True)
         assert result["dry_run"] is True
+
+    def test_node_delete_raises_unsupported(self):
+        with pytest.raises(ValidationError):
+            node_delete_impl(clip_index=0, node_index=1, dry_run=False)
 
 
 class TestStillImpl:

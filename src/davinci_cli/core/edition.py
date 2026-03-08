@@ -4,16 +4,18 @@ API正確性に関する注意:
   GetVersion() の返り値はDaVinci Resolveのバージョンによって異なる。
 
   DaVinci Resolve 20.x (実機確認済み):
-    GetVersion()       → [20, 3, 2, 9, '']   (list, 5番目がエディション情報)
+    GetVersion()       → [20, 3, 2, 9, '']   (list, 5番目は空文字)
     GetVersionString() → "20.3.2.9"
+    GetProductName()   → "DaVinci Resolve Studio"  ← v20で追加
 
   過去バージョン (19.x 等) では dict を返す可能性がある:
     GetVersion()       → {"product": "DaVinci Resolve Studio", ...}
 
   Studio 判定は以下の優先順位で行う:
-    1. dict の場合: product キーに "Studio" を含むか
-    2. list の場合: 文字列要素に "Studio" を含むか
-    3. GetVersionString() に "Studio" を含むか
+    1. GetProductName() に "Studio" を含むか (v20+)
+    2. dict の場合: product キーに "Studio" を含むか
+    3. list の場合: 文字列要素に "Studio" を含むか
+    4. GetVersionString() に "Studio" を含むか
 """
 
 from __future__ import annotations
@@ -35,21 +37,29 @@ def get_edition(resolve: Any) -> str:
     GetVersion() の戻り値が dict / list いずれの場合も対応し、
     フォールバックとして GetVersionString() も確認する。
     """
+    # 1. GetProductName() (v20+ で追加、最も信頼性が高い)
+    try:
+        product_name = resolve.GetProductName()
+        if isinstance(product_name, str) and _STUDIO_MARKER in product_name:
+            return EDITION_STUDIO
+    except (AttributeError, TypeError):
+        pass
+
     raw = resolve.GetVersion()
 
-    # dict 形式 (19.x 等): {"product": "DaVinci Resolve Studio", ...}
+    # 2. dict 形式 (19.x 等): {"product": "DaVinci Resolve Studio", ...}
     if isinstance(raw, dict):
         product: str = raw.get("product", "")
         if _STUDIO_MARKER in product:
             return EDITION_STUDIO
 
-    # list 形式 (20.x): [major, minor, patch, build, edition_suffix]
+    # 3. list 形式 (20.x): [major, minor, patch, build, edition_suffix]
     if isinstance(raw, list):
         for item in raw:
             if isinstance(item, str) and _STUDIO_MARKER in item:
                 return EDITION_STUDIO
 
-    # フォールバック: GetVersionString() を確認
+    # 4. フォールバック: GetVersionString() を確認
     try:
         version_str = resolve.GetVersionString()
         if isinstance(version_str, str) and _STUDIO_MARKER in version_str:
