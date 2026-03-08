@@ -102,8 +102,14 @@ def keyframe_mode_set_impl(mode: int, dry_run: bool = False) -> dict:
     resolve = get_resolve()
     result = resolve.SetKeyframeMode(mode)
     if result is False:
+        current_page = resolve.GetCurrentPage()
         raise ValidationError(
-            field="mode", reason=f"Failed to set keyframe mode to {mode}"
+            field="mode",
+            reason=(
+                f"Failed to set keyframe mode to {mode}. "
+                f"Current page: {current_page}. "
+                "This function is only available on the Color page."
+            ),
         )
     return {"set": True, "mode": mode, "label": _KEYFRAME_MODES[mode]}
 
