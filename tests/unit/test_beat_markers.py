@@ -297,3 +297,18 @@ class TestBeatMarkerCLI:
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["color"] == "Red"
+
+
+# --- MCP Tests ---
+
+
+class TestBeatMarkerMCP:
+    def test_mcp_tool_registered(self):
+        """MCP ツールとして timeline_marker_beats が登録されている"""
+        import asyncio
+
+        from davinci_cli.mcp.mcp_server import mcp
+
+        tools = asyncio.run(mcp.list_tools())
+        tool_names = [t.name for t in tools]
+        assert "timeline_marker_beats" in tool_names

@@ -109,6 +109,7 @@ from davinci_cli.commands.system import (
     ping_impl,
     version_impl,
 )
+from davinci_cli.commands.beat_markers import beat_marker_impl
 from davinci_cli.commands.timeline import (
     current_item_impl,
     marker_add_impl,
@@ -701,6 +702,35 @@ def timeline_marker_add(
 @mcp_error_handler
 def timeline_marker_delete(frame_id: int, dry_run: bool = True) -> dict:
     return marker_delete_impl(frame_id=frame_id, dry_run=dry_run)
+
+
+@mcp.tool(
+    description=(
+        "Add beat markers across the entire current timeline at regular intervals.\n"
+        "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
+        "Params: bpm (float, required), note_value (str, default='1/4'),\n"
+        "color (str, default='Blue'), name (str, default=''),\n"
+        "duration (int, default=1), dry_run (bool, default=True).\n"
+        "IMPORTANT: Always dry_run=True first to preview marker count."
+    )
+)
+@mcp_error_handler
+def timeline_marker_beats(
+    bpm: float,
+    note_value: str = "1/4",
+    color: str = "Blue",
+    name: str = "",
+    duration: int = 1,
+    dry_run: bool = True,
+) -> dict:
+    return beat_marker_impl(
+        bpm=bpm,
+        note_value=note_value,
+        color=color,
+        name=name,
+        duration=duration,
+        dry_run=dry_run,
+    )
 
 
 # ---- clip ----
