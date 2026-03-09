@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.1] - 2026-03-09
+
+### Added
+- `dr mcp install/uninstall/status/test` — Claude Desktop / Cowork 設定ファイルへの MCP サーバー自動登録 (lightroom-cli と UX 統一)
+- Claude Code Marketplace 対応 (`marketplace.json`, `plugin.json`)
+- バージョン同期スクリプトが Marketplace JSON もカバー
+
+### Fixed
+- Linux の Claude config パスのケーシング修正 (`claude` → `Claude`)
+- `test_dr_version` のバージョンハードコード除去
+
+### Changed
+- README を lightroom-cli 構成に合わせて全面改訂 (Architecture 図、Option A/B/C、Project Structure 等)
+- 内部ドキュメント (`docs/plans/`) をリポジトリから除外
+
 ## [1.0.0] - 2026-03-09
 
 Initial public release — CLI and MCP server wrapping the DaVinci Resolve Python API with an agent-first design.

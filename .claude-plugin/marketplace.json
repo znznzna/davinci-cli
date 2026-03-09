@@ -9,7 +9,8 @@
       "name": "davinci-cli",
       "source": "./plugin",
       "description": "DaVinci Resolve CLI / MCP — agent-first interface for full Resolve control",
-      "version": "1.0.0"
+      "version": "1.0.1"
     }
-  ]
+  ],
+  "version": "1.0.1"
 }
