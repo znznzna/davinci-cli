@@ -1,6 +1,6 @@
 """dr timeline marker beats — BPMベースのマーカー自動配置。
 
-BPM と音価を指定してタイムライン全体に等間隔マーカーを配置する。
+BPM と音価を指定して、指定クリップの範囲に等間隔マーカーを配置する。
 """
 
 from __future__ import annotations
@@ -60,6 +60,7 @@ def _calculate_beat_frames(
 
 class BeatMarkerInput(BaseModel):
     bpm: float
+    clip_index: int
     note_value: str = "1/4"
     color: str = "Blue"
     name: str = ""
@@ -71,6 +72,7 @@ class BeatMarkerOutput(BaseModel):
     bpm: float | None = None
     note_value: str | None = None
     color: str | None = None
+    clip_name: str | None = None
     frames: list[int] | None = None
     dry_run: bool | None = None
     action: str | None = None
@@ -89,16 +91,24 @@ def _get_current_project() -> Any:
     return project
 
 
-def _get_start_frame_offset(tl: Any) -> int:
-    """タイムラインの開始タイムコードをフレーム数に変換して返す。"""
-    tc = tl.GetStartTimecode() or "00:00:00:00"
-    parts = tc.replace(";", ":").split(":")
-    if len(parts) != 4:
-        return 0
-    h, m, s, f = (int(p) for p in parts)
-    fps_str = tl.GetSetting("timelineFrameRate") or "24"
-    fps = int(float(fps_str))
-    return h * 3600 * fps + m * 60 * fps + s * fps + f
+def _collect_clips(tl: Any) -> list[tuple[dict, Any]]:
+    """タイムラインから全クリップを収集する。"""
+    clips: list[tuple[dict, Any]] = []
+    for track_type in ["video", "audio"]:
+        track_count = tl.GetTrackCount(track_type)
+        for track_idx in range(1, track_count + 1):
+            track_clips = tl.GetItemListInTrack(track_type, track_idx) or []
+            for clip_item in track_clips:
+                info = {
+                    "index": len(clips),
+                    "name": clip_item.GetName(),
+                    "start": clip_item.GetStart(),
+                    "end": clip_item.GetEnd(),
+                    "type": track_type,
+                    "track": track_idx,
+                }
+                clips.append((info, clip_item))
+    return clips
 
 
 # --- _impl Function ---
@@ -106,13 +116,14 @@ def _get_start_frame_offset(tl: Any) -> int:
 
 def beat_marker_impl(
     bpm: float,
+    clip_index: int,
     note_value: str = "1/4",
     color: str = "Blue",
     name: str = "",
     duration: int = 1,
     dry_run: bool = False,
 ) -> dict:
-    """BPM と音価を指定してタイムライン全体にマーカーを配置する。"""
+    """BPM と音価を指定して、指定クリップの範囲にマーカーを配置する。"""
     # 1. バリデーション
     if note_value not in NOTE_VALUE_MAP:
         raise ValidationError(
@@ -131,14 +142,23 @@ def beat_marker_impl(
     if not tl:
         raise ProjectNotOpenError()
     fps = float(tl.GetSetting("timelineFrameRate") or "24")
-    offset = _get_start_frame_offset(tl)
-    end_frame_rel = tl.GetEndFrame()
-    end_frame_abs = end_frame_rel + offset
 
-    # 3. フレーム計算
-    frames = _calculate_beat_frames(bpm, note_value, fps, offset, end_frame_abs)
+    # 3. クリップ取得
+    clips = _collect_clips(tl)
+    if clip_index < 0 or clip_index >= len(clips):
+        raise ValidationError(
+            field="clip_index",
+            reason=f"Clip index {clip_index} out of range (0..{len(clips) - 1})",
+        )
+    clip_info, _clip_item = clips[clip_index]
+    start_frame = clip_info["start"]
+    end_frame = clip_info["end"]
+    clip_name = clip_info["name"]
 
-    # 4. dry-run
+    # 4. フレーム計算（クリップの start〜end 範囲）
+    frames = _calculate_beat_frames(bpm, note_value, fps, start_frame, end_frame)
+
+    # 5. dry-run
     if dry_run:
         return {
             "dry_run": True,
@@ -146,11 +166,15 @@ def beat_marker_impl(
             "bpm": bpm,
             "note_value": note_value,
             "color": color,
+            "clip_name": clip_name,
             "count": len(frames),
             "frames": frames,
         }
 
-    # 5. マーカー追加
+    # 6. マーカー追加（マーカーAPIは相対フレームを要求）
+    from davinci_cli.commands.timeline import _get_start_frame_offset
+
+    offset = _get_start_frame_offset(tl)
     for frame_abs in frames:
         rel_frame = frame_abs - offset
         tl.AddMarker(rel_frame, color, name, "", duration)
@@ -160,6 +184,7 @@ def beat_marker_impl(
         "bpm": bpm,
         "note_value": note_value,
         "color": color,
+        "clip_name": clip_name,
         "frames": frames,
     }
 
@@ -182,6 +207,7 @@ def beat_marker_cmd(
     data = BeatMarkerInput.model_validate(json_input)
     result = beat_marker_impl(
         bpm=data.bpm,
+        clip_index=data.clip_index,
         note_value=data.note_value,
         color=data.color,
         name=data.name,

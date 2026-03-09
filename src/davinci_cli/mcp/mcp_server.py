@@ -706,17 +706,18 @@ def timeline_marker_delete(frame_id: int, dry_run: bool = True) -> dict:
 
 @mcp.tool(
     description=(
-        "Add beat markers across the entire current timeline at regular intervals.\n"
+        "Add beat markers on a clip's range at regular BPM intervals.\n"
         "[risk_level: write] [mutating: true] [supports_dry_run: true]\n"
-        "Params: bpm (float, required), note_value (str, default='1/4'),\n"
-        "color (str, default='Blue'), name (str, default=''),\n"
-        "duration (int, default=1), dry_run (bool, default=True).\n"
+        "Params: bpm (float, required), clip_index (int, required, from clip list),\n"
+        "note_value (str, default='1/4'), color (str, default='Blue'),\n"
+        "name (str, default=''), duration (int, default=1), dry_run (bool, default=True).\n"
         "IMPORTANT: Always dry_run=True first to preview marker count."
     )
 )
 @mcp_error_handler
 def timeline_marker_beats(
     bpm: float,
+    clip_index: int,
     note_value: str = "1/4",
     color: str = "Blue",
     name: str = "",
@@ -725,6 +726,7 @@ def timeline_marker_beats(
 ) -> dict:
     return beat_marker_impl(
         bpm=bpm,
+        clip_index=clip_index,
         note_value=note_value,
         color=color,
         name=name,
