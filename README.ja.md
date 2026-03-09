@@ -65,13 +65,20 @@ pip install --upgrade davinci-cli
 
 #### Option B: Claude Desktop / Cowork（MCP Server）
 
-**Claude Desktop** または **Cowork** ユーザー向け — MCP サーバーを起動してください：
+**Claude Desktop** または **Cowork** ユーザー向け — MCP サーバーを登録してください：
 
 ```bash
-dr-mcp
+dr mcp install
 ```
 
-MCP 設定にサーバーを追加し、Claude Desktop / Cowork を再起動してください。全約90コマンドが snake_case 命名の MCP ツールとして利用可能です（例: `project_open`, `clip_list`）。
+Claude Desktop / Cowork を再起動してください。全約90コマンドが snake_case 命名の MCP ツールとして利用可能です（例: `project_open`, `clip_list`）。
+
+MCP のステータス確認：
+
+```bash
+dr mcp status
+dr mcp test       # DaVinci Resolve への接続テスト
+```
 
 CLI との主な違い：
 

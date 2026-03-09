@@ -86,6 +86,7 @@ def _register_commands() -> None:
         color,
         deliver,
         gallery,
+        mcp_cmd,
         media,
         project,
         schema,
@@ -102,6 +103,7 @@ def _register_commands() -> None:
     dr.add_command(media.media)
     dr.add_command(deliver.deliver)
     dr.add_command(gallery.gallery)
+    dr.add_command(mcp_cmd.mcp)
 
 
 _register_commands()

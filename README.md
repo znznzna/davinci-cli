@@ -65,13 +65,20 @@ The agent reads `SKILL.md` to understand available commands, parameters, and wor
 
 #### Option B: Claude Desktop / Cowork (MCP Server)
 
-For **Claude Desktop** or **Cowork** users — start the MCP server:
+For **Claude Desktop** or **Cowork** users — register the MCP server:
 
 ```bash
-dr-mcp
+dr mcp install
 ```
 
-Add the server to your MCP configuration, then restart Claude Desktop / Cowork. All ~90 commands are available as MCP tools with snake_case naming (e.g., `project_open`, `clip_list`).
+Restart Claude Desktop / Cowork. All ~90 commands are available as MCP tools with snake_case naming (e.g., `project_open`, `clip_list`).
+
+Check MCP status:
+
+```bash
+dr mcp status
+dr mcp test       # Test connection to DaVinci Resolve
+```
 
 Key differences from CLI:
 
