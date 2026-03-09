@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Sync version from pyproject.toml to all version files."""
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -41,6 +42,23 @@ def sync_skill_md(version: str) -> bool:
     return False
 
 
+def sync_json_version(path: Path, version: str) -> bool:
+    data = json.loads(path.read_text())
+    updated = False
+    if data.get("version") != version:
+        data["version"] = version
+        updated = True
+    # marketplace.json has plugins[].version
+    for plugin in data.get("plugins", []):
+        if plugin.get("version") != version:
+            plugin["version"] = version
+            updated = True
+    if updated:
+        path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+        print(f"Updated: {path.relative_to(ROOT)}")
+    return updated
+
+
 def main() -> int:
     version = read_pyproject_version()
     print(f"Source version (pyproject.toml): {version}")
@@ -48,6 +66,8 @@ def main() -> int:
     changed = False
     changed |= sync_init_py(version)
     changed |= sync_skill_md(version)
+    changed |= sync_json_version(ROOT / ".claude-plugin" / "marketplace.json", version)
+    changed |= sync_json_version(ROOT / "plugin" / ".claude-plugin" / "plugin.json", version)
 
     if not changed:
         print("All files already in sync.")

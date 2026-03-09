@@ -1,0 +1,19 @@
+{
+  "name": "davinci-cli",
+  "version": "1.0.0",
+  "description": "DaVinci Resolve CLI / MCP — agent-first interface for full Resolve control",
+  "author": {
+    "name": "M.Endo",
+    "email": "motoki@clockwork-sound.com"
+  },
+  "homepage": "https://github.com/znznzna/davinci-cli",
+  "repository": "https://github.com/znznzna/davinci-cli",
+  "license": "MIT",
+  "keywords": [
+    "davinci-resolve",
+    "video-editing",
+    "cli",
+    "mcp",
+    "agent"
+  ]
+}
