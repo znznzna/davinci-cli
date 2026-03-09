@@ -27,7 +27,7 @@ def _get_claude_config_path() -> Path:
         appdata = Path.home() / "AppData" / "Roaming"
         return appdata / "Claude" / config_name
     else:
-        return Path.home() / ".config" / "claude" / config_name
+        return Path.home() / ".config" / "Claude" / config_name
 
 
 def _read_config(config_path: Path) -> dict[str, Any]:
