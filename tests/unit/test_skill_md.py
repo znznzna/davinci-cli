@@ -1,10 +1,10 @@
 from pathlib import Path
 
-SKILL_MD = Path("SKILL.md")
+SKILL_MD = Path("plugin/skills/davinci-cli/SKILL.md")
 
 
 def test_skill_md_exists():
-    assert SKILL_MD.exists(), "SKILL.md must exist in project root"
+    assert SKILL_MD.exists(), "SKILL.md must exist in plugin/skills/davinci-cli/"
 
 
 def test_skill_md_has_frontmatter():
