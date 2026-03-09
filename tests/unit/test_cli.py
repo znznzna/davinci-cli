@@ -21,7 +21,9 @@ class TestDrCommand:
     def test_dr_version(self):
         result = CliRunner().invoke(dr, ["--version"])
         assert result.exit_code == 0
-        assert "0.1.0" in result.output
+        from davinci_cli import __version__
+
+        assert __version__ in result.output
 
     def test_dr_has_verbose_flag(self):
         result = CliRunner().invoke(dr, ["--verbose", "--help"])
