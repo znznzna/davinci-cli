@@ -69,6 +69,8 @@ class BeatMarkerInput(BaseModel):
 
 class BeatMarkerOutput(BaseModel):
     added_count: int | None = None
+    requested_count: int | None = None
+    failed_frames: list[int] | None = None
     bpm: float | None = None
     note_value: str | None = None
     color: str | None = None
@@ -176,18 +178,27 @@ def beat_marker_impl(
 
     offset = _get_start_frame_offset(tl)
     marker_name = name or " "
+    added_count = 0
+    failed_frames = []
     for frame_abs in frames:
         rel_frame = frame_abs - offset
-        tl.AddMarker(rel_frame, color, marker_name, "", duration)
+        if tl.AddMarker(rel_frame, color, marker_name, "", duration):
+            added_count += 1
+        else:
+            failed_frames.append(frame_abs)
 
-    return {
-        "added_count": len(frames),
+    result = {
+        "added_count": added_count,
+        "requested_count": len(frames),
         "bpm": bpm,
         "note_value": note_value,
         "color": color,
         "clip_name": clip_name,
         "frames": frames,
     }
+    if failed_frames:
+        result["failed_frames"] = failed_frames
+    return result
 
 
 # --- CLI Command ---

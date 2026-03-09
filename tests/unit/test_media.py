@@ -286,6 +286,63 @@ class TestMediaMetadataImpl:
         clip.TranscribeAudio.assert_called_once()
 
 
+class TestMediaReturnValueChecks:
+    def test_set_metadata_returns_false_raises(self, mock_resolve):
+        """SetMetadata が False → ValidationError。"""
+        clip = (
+            mock_resolve.GetProjectManager()
+            .GetCurrentProject()
+            .GetMediaPool()
+            .GetCurrentFolder()
+            .GetClipList()[0]
+        )
+        clip.SetMetadata.return_value = False
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="SetMetadata failed"),
+        ):
+            media_metadata_set_impl(clip_name="clip1.mov", key="FakeKey", value="test")
+
+    def test_delete_clips_returns_false_raises(self, mock_resolve):
+        """DeleteClips が False → ValidationError。"""
+        media_pool = mock_resolve.GetProjectManager().GetCurrentProject().GetMediaPool()
+        media_pool.DeleteClips.return_value = False
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="DeleteClips failed"),
+        ):
+            media_delete_impl(clip_names=["clip1.mov"])
+
+    def test_move_clips_returns_false_raises(self, mock_resolve):
+        """MoveClips が False → ValidationError。"""
+        media_pool = mock_resolve.GetProjectManager().GetCurrentProject().GetMediaPool()
+        media_pool.MoveClips.return_value = False
+        root = media_pool.GetRootFolder()
+        target_folder = MagicMock()
+        target_folder.GetName.return_value = "target"
+        root.GetSubFolderList.return_value = [target_folder]
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="MoveClips failed"),
+        ):
+            media_move_impl(clip_names=["clip1.mov"], target_folder="target")
+
+    def test_delete_folders_returns_false_raises(self, mock_resolve):
+        """DeleteFolders が False → ValidationError。"""
+        media_pool = mock_resolve.GetProjectManager().GetCurrentProject().GetMediaPool()
+        media_pool.DeleteFolders.return_value = False
+        root = media_pool.GetRootFolder()
+        folder = MagicMock()
+        folder.GetName.return_value = "TestFolder"
+        folder.GetSubFolderList.return_value = []
+        root.GetSubFolderList.return_value = [folder]
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="DeleteFolders failed"),
+        ):
+            folder_delete_impl(name="TestFolder")
+
+
 class TestMediaCLI:
     def test_media_list(self, mock_resolve):
         with patch(RESOLVE_PATCH, return_value=mock_resolve):

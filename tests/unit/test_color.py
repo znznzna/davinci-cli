@@ -153,6 +153,15 @@ class TestStillImpl:
             result = still_list_impl()
         assert isinstance(result, list)
 
+    def test_still_grab_fails_raises(self, mock_resolve):
+        """GrabStill が False → ValidationError。"""
+        tl = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        tl.GrabStill.return_value = False
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="GrabStill failed"),
+        ):
+            still_grab_impl(clip_index=0)
 
 
 class TestColorVersionImpl:

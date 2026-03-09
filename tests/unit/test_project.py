@@ -13,8 +13,9 @@ from davinci_cli.commands.project import (
     project_list_impl,
     project_open_impl,
     project_rename_impl,
+    project_settings_set_impl,
 )
-from davinci_cli.core.exceptions import ProjectNotFoundError, ValidationError
+from davinci_cli.core.exceptions import ProjectNotFoundError, ProjectNotOpenError, ValidationError
 
 RESOLVE_PATCH = "davinci_cli.commands.project.get_resolve"
 
@@ -81,6 +82,38 @@ class TestProjectCloseImpl:
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = project_close_impl()
         assert result["closed"] is True
+
+    def test_close_no_project_raises(self, mock_resolve):
+        """プロジェクト未開で close → ProjectNotOpenError。"""
+        pm = mock_resolve.GetProjectManager()
+        pm.GetCurrentProject.return_value = None
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ProjectNotOpenError),
+        ):
+            project_close_impl()
+
+    def test_close_api_fails_raises(self, mock_resolve):
+        """CloseProject が False を返す → ValidationError。"""
+        pm = mock_resolve.GetProjectManager()
+        pm.CloseProject.return_value = False
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="CloseProject failed"),
+        ):
+            project_close_impl()
+
+
+class TestProjectSettingsSetImpl:
+    def test_set_invalid_key_raises(self, mock_resolve):
+        """無効キーで SetSetting が False → ValidationError。"""
+        project = mock_resolve.GetProjectManager().GetCurrentProject()
+        project.SetSetting.return_value = False
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="SetSetting failed"),
+        ):
+            project_settings_set_impl(key="invalidKey", value="test")
 
 
 class TestProjectCreateImpl:

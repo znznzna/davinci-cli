@@ -349,7 +349,13 @@ def still_grab_impl(clip_index: int, dry_run: bool = False) -> dict:
         }
     tl = _get_current_timeline()
     _get_clip_item_by_index(tl, clip_index)  # validate index exists
-    tl.GrabStill()
+    result = tl.GrabStill()
+    if not result:
+        raise ValidationError(
+            field="clip_index",
+            reason=f"GrabStill failed for clip at index {clip_index}. "
+            "Ensure the Color page is active.",
+        )
     return {"grabbed": True, "clip_index": clip_index}
 
 

@@ -418,7 +418,13 @@ def marker_add_impl(
         raise ProjectNotOpenError()
     offset = _get_start_frame_offset(tl)
     rel_frame = frame_id - offset
-    tl.AddMarker(rel_frame, color, name, note or "", duration)
+    result = tl.AddMarker(rel_frame, color, name, note or "", duration)
+    if not result:
+        raise ValidationError(
+            field="frame_id",
+            reason=f"AddMarker failed at frame {frame_id}. "
+            "Possible causes: duplicate frame, empty name, or invalid color.",
+        )
     return {"added": True, "frame_id": frame_id}
 
 
@@ -435,7 +441,12 @@ def marker_delete_impl(frame_id: int, dry_run: bool = False) -> dict:
         raise ProjectNotOpenError()
     offset = _get_start_frame_offset(tl)
     rel_frame = frame_id - offset
-    tl.DeleteMarkerAtFrame(rel_frame)
+    result = tl.DeleteMarkerAtFrame(rel_frame)
+    if not result:
+        raise ValidationError(
+            field="frame_id",
+            reason=f"No marker found at frame {frame_id}.",
+        )
     return {"deleted": True, "frame_id": frame_id}
 
 

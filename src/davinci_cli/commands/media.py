@@ -273,7 +273,12 @@ def folder_delete_impl(name: str, dry_run: bool = False) -> dict:
         raise ValidationError(
             field="name", reason=f"Folder not found: {name}"
         )
-    media_pool.DeleteFolders([folder])
+    result = media_pool.DeleteFolders([folder])
+    if not result:
+        raise ValidationError(
+            field="name",
+            reason=f"DeleteFolders failed for folder: {name}",
+        )
     return {"deleted": name}
 
 
@@ -297,7 +302,12 @@ def media_move_impl(
             field="target_folder",
             reason=f"Folder not found: {target_folder}",
         )
-    media_pool.MoveClips(clips, target)
+    result = media_pool.MoveClips(clips, target)
+    if not result:
+        raise ValidationError(
+            field="clip_names",
+            reason="MoveClips failed. Some clips may not have been moved.",
+        )
     return {
         "moved_count": len(clips),
         "clip_names": clip_names,
@@ -317,7 +327,12 @@ def media_delete_impl(
         }
     media_pool = _get_media_pool()
     clips = _find_clips_by_names(media_pool, clip_names)
-    media_pool.DeleteClips(clips)
+    result = media_pool.DeleteClips(clips)
+    if not result:
+        raise ValidationError(
+            field="clip_names",
+            reason="DeleteClips failed. Some clips may be in use on a timeline.",
+        )
     return {
         "deleted_count": len(clips),
         "clip_names": clip_names,
@@ -339,7 +354,12 @@ def media_relink_impl(
         }
     media_pool = _get_media_pool()
     clips = _find_clips_by_names(media_pool, clip_names)
-    media_pool.RelinkClips(clips, validated_path)
+    result = media_pool.RelinkClips(clips, validated_path)
+    if not result:
+        raise ValidationError(
+            field="folder_path",
+            reason="RelinkClips failed. Check that the path exists and contains matching media.",
+        )
     return {
         "relinked_count": len(clips),
         "clip_names": clip_names,
@@ -350,7 +370,12 @@ def media_relink_impl(
 def media_unlink_impl(clip_names: list[str]) -> dict:
     media_pool = _get_media_pool()
     clips = _find_clips_by_names(media_pool, clip_names)
-    media_pool.UnlinkClips(clips)
+    result = media_pool.UnlinkClips(clips)
+    if not result:
+        raise ValidationError(
+            field="clip_names",
+            reason="UnlinkClips failed.",
+        )
     return {
         "unlinked_count": len(clips),
         "clip_names": clip_names,
@@ -385,7 +410,13 @@ def media_metadata_set_impl(
         }
     media_pool = _get_media_pool()
     clip = _find_clips_by_names(media_pool, [clip_name])[0]
-    clip.SetMetadata(key, value)
+    result = clip.SetMetadata(key, value)
+    if not result:
+        raise ValidationError(
+            field="key",
+            reason=f"SetMetadata failed for key '{key}' on clip '{clip_name}'. "
+            "The metadata key may be read-only or invalid.",
+        )
     return {
         "clip_name": clip_name,
         "key": key,

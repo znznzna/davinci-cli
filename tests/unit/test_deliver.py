@@ -134,6 +134,35 @@ class TestDeliverStartImpl:
         assert result["would_render"] is True
         assert len(result["jobs"]) == 1
 
+    def test_start_no_jobs_raises(self, mock_resolve):
+        """ジョブ0件で start → エラー。"""
+        project = mock_resolve.GetProjectManager().GetCurrentProject()
+        project.GetRenderJobList.return_value = []
+        project.GetRenderJobStatus.return_value = {}
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="No render jobs"),
+        ):
+            deliver_start_impl()
+
+    def test_start_rendering_returns_false_raises(self, mock_resolve):
+        """StartRendering が False を返す → エラー。"""
+        project = mock_resolve.GetProjectManager().GetCurrentProject()
+        project.StartRendering.return_value = False
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="StartRendering failed"),
+        ):
+            deliver_start_impl()
+
+    def test_start_invalid_job_ids_raises_with_field(self, mock_resolve):
+        """存在しない job_id → ValidationError（TypeError しない）。"""
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="No matching jobs"),
+        ):
+            deliver_start_impl(job_ids=["nonexistent-id"])
+
 
 class TestDeliverExtendedImpl:
     def test_delete_job_dry_run(self):

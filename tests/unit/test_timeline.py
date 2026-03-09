@@ -241,6 +241,28 @@ class TestMarkerImpl:
         result = marker_delete_impl(frame_id=100, dry_run=True)
         assert result["dry_run"] is True
 
+    def test_marker_add_fails_returns_validation_error(self, mock_resolve):
+        """AddMarker が False を返す → ValidationError。"""
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.GetStartTimecode.return_value = "01:00:00:00"
+        timeline.AddMarker.return_value = False
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="AddMarker failed"),
+        ):
+            marker_add_impl(frame_id=86500, color="Blue", name="Test")
+
+    def test_marker_delete_fails_returns_validation_error(self, mock_resolve):
+        """DeleteMarkerAtFrame が False を返す → ValidationError。"""
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline.GetStartTimecode.return_value = "01:00:00:00"
+        timeline.DeleteMarkerAtFrame.return_value = False
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="No marker found"),
+        ):
+            marker_delete_impl(frame_id=86500)
+
 
 class TestTimecodeImpl:
     def test_timecode_get(self, mock_resolve):

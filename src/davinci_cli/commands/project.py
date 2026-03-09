@@ -149,7 +149,15 @@ def project_close_impl(dry_run: bool = False) -> dict:
         return {"dry_run": True, "action": "close"}
     resolve = get_resolve()
     pm = resolve.GetProjectManager()
-    pm.CloseProject(pm.GetCurrentProject())
+    current = pm.GetCurrentProject()
+    if not current:
+        raise ProjectNotOpenError()
+    result = pm.CloseProject(current)
+    if not result:
+        raise ValidationError(
+            field="project",
+            reason="CloseProject failed. The project may have unsaved changes.",
+        )
     return {"closed": True}
 
 
@@ -226,7 +234,13 @@ def project_settings_set_impl(
             "value": value,
         }
     project = _get_current_project()
-    project.SetSetting(key, value)
+    result = project.SetSetting(key, value)
+    if not result:
+        raise ValidationError(
+            field="key",
+            reason=f"SetSetting failed for key '{key}'. "
+            "The key may be invalid or the value may be out of range.",
+        )
     return {"set": True, "key": key, "value": value}
 
 

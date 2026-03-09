@@ -65,6 +65,7 @@ class DeliverStartOutput(BaseModel):
     jobs: list[dict] | None = None
     job_count: int | None = None
     estimated_seconds: int | None = None
+    failed_ids: list[str] | None = None
 
 
 class DeliverStatusOutput(BaseModel):
@@ -257,14 +258,41 @@ def deliver_start_impl(
 
     project = _get_current_project()
     if job_ids:
+        if not jobs:
+            raise ValidationError(
+                field="job_ids",
+                reason=f"No matching jobs found for IDs: {job_ids}",
+            )
         validated_ids = [j["job_id"] for j in jobs]
-        if not validated_ids:
-            raise ValidationError(f"No matching jobs found for IDs: {job_ids}")
+        failed_ids = []
         for jid in validated_ids:
-            project.StartRendering(jid)
+            if not project.StartRendering(jid):
+                failed_ids.append(jid)
+        if failed_ids and len(failed_ids) == len(validated_ids):
+            raise ValidationError(
+                field="job_ids",
+                reason=f"StartRendering failed for all jobs: {failed_ids}",
+            )
+        result = {
+            "rendering_started": True,
+            "job_count": len(validated_ids) - len(failed_ids),
+        }
+        if failed_ids:
+            result["failed_ids"] = failed_ids
+        return result
     else:
-        project.StartRendering()
-    return {"rendering_started": True, "job_count": len(jobs)}
+        if not jobs:
+            raise ValidationError(
+                field="job_ids",
+                reason="No render jobs exist. Add jobs before starting.",
+            )
+        result = project.StartRendering()
+        if not result:
+            raise ValidationError(
+                field="render",
+                reason="StartRendering failed. Check render job configuration.",
+            )
+        return {"rendering_started": True, "job_count": len(jobs)}
 
 
 def deliver_stop_impl() -> dict:

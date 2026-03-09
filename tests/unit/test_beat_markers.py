@@ -189,6 +189,27 @@ class TestBeatMarkerImplExecute:
         assert first_call[0][4] == 5
 
 
+class TestBeatMarkerPartialSuccess:
+    def test_partial_success_reports_actual_count(self, mock_resolve):
+        """一部フレームで AddMarker が失敗 → added_count は実際の成功数。"""
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        call_count = 0
+
+        def add_marker_side_effect(rel_frame, color, name, note, duration):
+            nonlocal call_count
+            call_count += 1
+            # 最初のフレーム（rel_frame=0）は重複で拒否
+            return rel_frame != 0
+
+        timeline.AddMarker.side_effect = add_marker_side_effect
+        with patch(RESOLVE_PATCH, return_value=mock_resolve):
+            result = beat_marker_impl(bpm=120, clip_index=1, note_value="1/4")
+        assert result["added_count"] == 20  # 21 - 1 (frame 0 failed)
+        assert result["requested_count"] == 21
+        assert result["failed_frames"] is not None
+        assert len(result["failed_frames"]) == 1
+
+
 class TestBeatMarkerImplValidation:
     def test_invalid_note_value_raises(self, mock_resolve):
         """不正な音価で ValidationError"""
