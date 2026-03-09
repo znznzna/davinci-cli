@@ -1,4 +1,5 @@
 """dr gallery — ギャラリー・スチルアルバム管理コマンド。"""
+
 from __future__ import annotations
 
 from typing import Any
@@ -112,7 +113,7 @@ def _get_current_album() -> tuple[Any, Any]:
 # --- _impl Functions ---
 
 
-def gallery_album_list_impl() -> list[dict]:
+def gallery_album_list_impl() -> list[dict[str, Any]]:
     gallery = _get_gallery()
     albums = gallery.GetGalleryStillAlbums() or []
     result = []
@@ -122,7 +123,7 @@ def gallery_album_list_impl() -> list[dict]:
     return result
 
 
-def gallery_album_current_impl() -> dict:
+def gallery_album_current_impl() -> dict[str, Any]:
     gallery = _get_gallery()
     album = gallery.GetCurrentStillAlbum()
     if not album:
@@ -131,7 +132,7 @@ def gallery_album_current_impl() -> dict:
     return {"name": name}
 
 
-def gallery_album_set_impl(name: str, dry_run: bool = False) -> dict:
+def gallery_album_set_impl(name: str, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "album_set", "name": name}
     gallery = _get_gallery()
@@ -147,7 +148,7 @@ def gallery_album_set_impl(name: str, dry_run: bool = False) -> dict:
     raise ValidationError(field="name", reason=f"Album not found: {name}")
 
 
-def gallery_album_create_impl(dry_run: bool = False) -> dict:
+def gallery_album_create_impl(dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "album_create"}
     gallery = _get_gallery()
@@ -163,7 +164,7 @@ def gallery_still_export_impl(
     file_prefix: str = "still",
     format: str = "dpx",
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     validated = validate_path(folder_path)
     if dry_run:
         return {
@@ -185,7 +186,7 @@ def gallery_still_export_impl(
 def gallery_still_import_impl(
     paths: list[str],
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     validated_paths = [str(validate_path(p)) for p in paths]
     if dry_run:
         return {"dry_run": True, "action": "still_import", "paths": validated_paths}
@@ -199,7 +200,7 @@ def gallery_still_import_impl(
 def gallery_still_delete_impl(
     still_indices: list[int],
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -218,9 +219,7 @@ def gallery_still_delete_impl(
         targets.append(stills[idx])
     result = album.DeleteStills(targets)
     if result is False:
-        raise ValidationError(
-            field="still_indices", reason="Failed to delete stills"
-        )
+        raise ValidationError(field="still_indices", reason="Failed to delete stills")
     return {"deleted": len(targets), "still_indices": still_indices}
 
 
@@ -281,13 +280,19 @@ def gallery_still() -> None:
 @click.argument("folder_path")
 @click.option("--file-prefix", default="still", help="File name prefix.")
 @click.option(
-    "--format", "fmt", default="dpx",
+    "--format",
+    "fmt",
+    default="dpx",
     help="Export format (dpx, cin, tif, jpg, png, ppm, bmp, xpm, drx).",
 )
 @dry_run_option
 @click.pass_context
 def still_export_cmd(
-    ctx: click.Context, folder_path: str, file_prefix: str, fmt: str, dry_run: bool,
+    ctx: click.Context,
+    folder_path: str,
+    file_prefix: str,
+    fmt: str,
+    dry_run: bool,
 ) -> None:
     """スチルをエクスポートする。"""
     result = gallery_still_export_impl(
@@ -310,9 +315,13 @@ def still_import_cmd(ctx: click.Context, paths: tuple[str, ...], dry_run: bool) 
 @click.argument("still_indices", nargs=-1, required=True, type=int)
 @dry_run_option
 @click.pass_context
-def still_delete_cmd(ctx: click.Context, still_indices: tuple[int, ...], dry_run: bool) -> None:
+def still_delete_cmd(
+    ctx: click.Context, still_indices: tuple[int, ...], dry_run: bool
+) -> None:
     """スチルを削除する。"""
-    result = gallery_still_delete_impl(still_indices=list(still_indices), dry_run=dry_run)
+    result = gallery_still_delete_impl(
+        still_indices=list(still_indices), dry_run=dry_run
+    )
     output(result, pretty=ctx.obj.get("pretty"))
 
 
@@ -328,9 +337,7 @@ def gallery_still_list_cmd(ctx: click.Context) -> None:
 @click.argument("clip_index", type=int)
 @dry_run_option
 @click.pass_context
-def gallery_still_grab_cmd(
-    ctx: click.Context, clip_index: int, dry_run: bool
-) -> None:
+def gallery_still_grab_cmd(ctx: click.Context, clip_index: int, dry_run: bool) -> None:
     """スチルを取得する。"""
     result = still_grab_impl(clip_index=clip_index, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))

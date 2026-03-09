@@ -252,23 +252,21 @@ def _get_timeline_by_name(project: Any, name: str) -> Any:
         tl = project.GetTimelineByIndex(i)
         if tl and tl.GetName() == name:
             return tl
-    raise ValidationError(
-        field="timeline", reason=f"Timeline not found: {name}"
-    )
+    raise ValidationError(field="timeline", reason=f"Timeline not found: {name}")
 
 
 # --- _impl Functions ---
 
 
-def timeline_list_impl(fields: list[str] | None = None) -> list[dict]:
+def timeline_list_impl(fields: list[str] | None = None) -> list[dict[str, Any]]:
     project = _get_current_project()
     count = project.GetTimelineCount()
-    timelines: list[dict] = []
+    timelines: list[dict[str, Any]] = []
     for i in range(1, count + 1):
         tl = project.GetTimelineByIndex(i)
         if tl is None:
             continue
-        info: dict = {"name": tl.GetName()}
+        info: dict[str, Any] = {"name": tl.GetName()}
         if fields is None or "fps" in fields:
             try:
                 info["fps"] = float(tl.GetSetting("timelineFrameRate"))
@@ -276,13 +274,11 @@ def timeline_list_impl(fields: list[str] | None = None) -> list[dict]:
                 info["fps"] = None
         timelines.append(info)
     if fields:
-        timelines = [
-            {k: v for k, v in t.items() if k in fields} for t in timelines
-        ]
+        timelines = [{k: v for k, v in t.items() if k in fields} for t in timelines]
     return timelines
 
 
-def timeline_current_impl(fields: list[str] | None = None) -> dict:
+def timeline_current_impl(fields: list[str] | None = None) -> dict[str, Any]:
     project = _get_current_project()
     tl = project.GetCurrentTimeline()
     if not tl:
@@ -299,7 +295,7 @@ def timeline_current_impl(fields: list[str] | None = None) -> dict:
     return info
 
 
-def timeline_switch_impl(name: str, dry_run: bool = False) -> dict:
+def timeline_switch_impl(name: str, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "switch", "name": name}
     project = _get_current_project()
@@ -314,16 +310,14 @@ def timeline_create_impl(
     width: int | None = None,
     height: int | None = None,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "create", "name": name}
     project = _get_current_project()
     media_pool = project.GetMediaPool()
     tl = media_pool.CreateEmptyTimeline(name)
     if not tl:
-        raise ValidationError(
-            field="name", reason=f"Failed to create timeline: {name}"
-        )
+        raise ValidationError(field="name", reason=f"Failed to create timeline: {name}")
     if fps is not None:
         tl.SetSetting("timelineFrameRate", str(fps))
     if width is not None:
@@ -333,7 +327,7 @@ def timeline_create_impl(
     return {"created": name}
 
 
-def timeline_delete_impl(name: str, dry_run: bool = False) -> dict:
+def timeline_delete_impl(name: str, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "delete", "name": name}
     project = _get_current_project()
@@ -348,7 +342,7 @@ def timeline_export_impl(
     output_path: str,
     timeline_name: str | None = None,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -373,7 +367,7 @@ def timeline_export_impl(
     return {"exported": output_path, "format": format}
 
 
-def marker_list_impl(timeline_name: str | None = None) -> list[dict]:
+def marker_list_impl(timeline_name: str | None = None) -> list[dict[str, Any]]:
     project = _get_current_project()
     tl = (
         _get_timeline_by_name(project, timeline_name)
@@ -403,7 +397,7 @@ def marker_add_impl(
     note: str | None = None,
     duration: int = 1,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -428,7 +422,7 @@ def marker_add_impl(
     return {"added": True, "frame_id": frame_id}
 
 
-def marker_delete_impl(frame_id: int, dry_run: bool = False) -> dict:
+def marker_delete_impl(frame_id: int, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -450,12 +444,12 @@ def marker_delete_impl(frame_id: int, dry_run: bool = False) -> dict:
     return {"deleted": True, "frame_id": frame_id}
 
 
-def timecode_get_impl() -> dict:
+def timecode_get_impl() -> dict[str, Any]:
     tl = _get_current_timeline()
     return {"timecode": tl.GetCurrentTimecode()}
 
 
-def timecode_set_impl(timecode: str, dry_run: bool = False) -> dict:
+def timecode_set_impl(timecode: str, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "timecode_set", "timecode": timecode}
     tl = _get_current_timeline()
@@ -470,7 +464,7 @@ def timecode_set_impl(timecode: str, dry_run: bool = False) -> dict:
 _VALID_TRACK_TYPES = {"video", "audio", "subtitle"}
 
 
-def track_list_impl() -> list[dict]:
+def track_list_impl() -> list[dict[str, Any]]:
     """全トラックタイプのトラック一覧を返す。"""
     tl = _get_current_timeline()
     result = []
@@ -479,14 +473,18 @@ def track_list_impl() -> list[dict]:
         for idx in range(1, count + 1):
             name = tl.GetTrackName(track_type, idx)
             result.append(
-                {"type": track_type, "index": idx, "name": name or f"{track_type} {idx}"}
+                {
+                    "type": track_type,
+                    "index": idx,
+                    "name": name or f"{track_type} {idx}",
+                }
             )
     return result
 
 
 def track_add_impl(
     track_type: str, sub_track_type: str | None = None, dry_run: bool = False
-) -> dict:
+) -> dict[str, Any]:
     """トラックを追加する。"""
     if track_type not in _VALID_TRACK_TYPES:
         raise ValidationError(
@@ -515,7 +513,7 @@ def track_add_impl(
 
 def track_delete_impl(
     track_type: str, index: int, dry_run: bool = False
-) -> dict:
+) -> dict[str, Any]:
     """トラックを削除する。"""
     if track_type not in _VALID_TRACK_TYPES:
         raise ValidationError(
@@ -541,7 +539,7 @@ def track_delete_impl(
 
 def track_enable_impl(
     track_type: str, index: int, enabled: bool | None = None
-) -> dict:
+) -> dict[str, Any]:
     """トラックの有効/無効を取得または設定する。"""
     if track_type not in _VALID_TRACK_TYPES:
         raise ValidationError(
@@ -554,15 +552,13 @@ def track_enable_impl(
         return {"enabled": val, "track_type": track_type, "index": index}
     result = tl.SetTrackEnable(track_type, index, enabled)
     if result is False:
-        raise ValidationError(
-            field="enabled", reason="Failed to set track enable"
-        )
+        raise ValidationError(field="enabled", reason="Failed to set track enable")
     return {"set": True, "enabled": enabled, "track_type": track_type, "index": index}
 
 
 def track_lock_impl(
     track_type: str, index: int, locked: bool | None = None
-) -> dict:
+) -> dict[str, Any]:
     """トラックのロック状態を取得または設定する。"""
     if track_type not in _VALID_TRACK_TYPES:
         raise ValidationError(
@@ -575,13 +571,11 @@ def track_lock_impl(
         return {"locked": val, "track_type": track_type, "index": index}
     result = tl.SetTrackLock(track_type, index, locked)
     if result is False:
-        raise ValidationError(
-            field="locked", reason="Failed to set track lock"
-        )
+        raise ValidationError(field="locked", reason="Failed to set track lock")
     return {"set": True, "locked": locked, "track_type": track_type, "index": index}
 
 
-def current_item_impl() -> dict:
+def current_item_impl() -> dict[str, Any]:
     tl = _get_current_timeline()
     item = tl.GetCurrentVideoItem()
     if not item:
@@ -589,7 +583,9 @@ def current_item_impl() -> dict:
     return {"name": item.GetName()}
 
 
-def timeline_duplicate_impl(name: str | None = None, dry_run: bool = False) -> dict:
+def timeline_duplicate_impl(
+    name: str | None = None, dry_run: bool = False
+) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "duplicate", "name": name}
     tl = _get_current_timeline()
@@ -599,13 +595,13 @@ def timeline_duplicate_impl(name: str | None = None, dry_run: bool = False) -> d
     return {"duplicated": True, "name": new_tl.GetName()}
 
 
-def timeline_detect_scene_cuts_impl() -> dict:
+def timeline_detect_scene_cuts_impl() -> dict[str, Any]:
     tl = _get_current_timeline()
     result = tl.DetectSceneCuts()
     return {"detected": bool(result)}
 
 
-def timeline_create_subtitles_impl() -> dict:
+def timeline_create_subtitles_impl() -> dict[str, Any]:
     tl = _get_current_timeline()
     result = tl.CreateSubtitlesFromAudio()
     return {"created": bool(result)}
@@ -655,7 +651,7 @@ def timeline_switch(ctx: click.Context, name: str, dry_run: bool) -> None:
 def timeline_create(
     ctx: click.Context,
     name: str | None,
-    json_input: dict | None,
+    json_input: dict[str, Any] | None,
     dry_run: bool,
 ) -> None:
     """新規タイムライン作成。"""
@@ -689,7 +685,7 @@ def timeline_delete(ctx: click.Context, name: str, dry_run: bool) -> None:
 @dry_run_option
 @click.pass_context
 def timeline_export(
-    ctx: click.Context, json_input: dict | None, dry_run: bool
+    ctx: click.Context, json_input: dict[str, Any] | None, dry_run: bool
 ) -> None:
     """タイムラインエクスポート（XML/AAF/EDL）。"""
     if not json_input:
@@ -743,7 +739,7 @@ def current_item_cmd(ctx: click.Context) -> None:
 def timeline_duplicate_cmd(
     ctx: click.Context,
     name: str | None,
-    json_input: dict | None,
+    json_input: dict[str, Any] | None,
     dry_run: bool,
 ) -> None:
     """タイムライン複製。"""
@@ -785,7 +781,9 @@ def track_list_cmd(ctx: click.Context) -> None:
 
 @timeline_track.command(name="add")
 @click.option("--track-type", required=True, help="Track type: video, audio, subtitle")
-@click.option("--sub-track-type", default=None, help="Sub track type (e.g., mono, stereo)")
+@click.option(
+    "--sub-track-type", default=None, help="Sub track type (e.g., mono, stereo)"
+)
 @json_input_option
 @dry_run_option
 @click.pass_context
@@ -793,7 +791,7 @@ def track_add_cmd(
     ctx: click.Context,
     track_type: str | None,
     sub_track_type: str | None,
-    json_input: dict | None,
+    json_input: dict[str, Any] | None,
     dry_run: bool,
 ) -> None:
     """トラック追加。"""
@@ -819,7 +817,7 @@ def track_delete_cmd(
     ctx: click.Context,
     track_type: str | None,
     index: int | None,
-    json_input: dict | None,
+    json_input: dict[str, Any] | None,
     dry_run: bool,
 ) -> None:
     """トラック削除（破壊的操作）。"""
@@ -829,16 +827,16 @@ def track_delete_cmd(
         index = data.index
     if not track_type or index is None:
         raise click.UsageError("--track-type and --index (or --json) are required")
-    result = track_delete_impl(
-        track_type=track_type, index=index, dry_run=dry_run
-    )
+    result = track_delete_impl(track_type=track_type, index=index, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
 
 
 @timeline_track.command(name="enable")
 @click.option("--track-type", required=True, help="Track type: video, audio, subtitle")
 @click.option("--index", required=True, type=int, help="Track index (1-based)")
-@click.option("--value", type=bool, default=None, help="Set enabled state (omit to get)")
+@click.option(
+    "--value", type=bool, default=None, help="Set enabled state (omit to get)"
+)
 @json_input_option
 @click.pass_context
 def track_enable_cmd(
@@ -846,7 +844,7 @@ def track_enable_cmd(
     track_type: str | None,
     index: int | None,
     value: bool | None,
-    json_input: dict | None,
+    json_input: dict[str, Any] | None,
 ) -> None:
     """トラック有効/無効の取得・設定。"""
     if json_input:
@@ -871,7 +869,7 @@ def track_lock_cmd(
     track_type: str | None,
     index: int | None,
     value: bool | None,
-    json_input: dict | None,
+    json_input: dict[str, Any] | None,
 ) -> None:
     """トラックロック状態の取得・設定。"""
     if json_input:
@@ -904,7 +902,7 @@ def marker_list_cmd(ctx: click.Context, timeline_name: str | None) -> None:
 @dry_run_option
 @click.pass_context
 def marker_add_cmd(
-    ctx: click.Context, json_input: dict | None, dry_run: bool
+    ctx: click.Context, json_input: dict[str, Any] | None, dry_run: bool
 ) -> None:
     """マーカー追加。"""
     if not json_input:
@@ -927,16 +925,17 @@ def marker_add_cmd(
 @dry_run_option
 @click.pass_context
 def marker_delete_cmd(
-    ctx: click.Context, frame_id: int | None, json_input: dict | None, dry_run: bool
+    ctx: click.Context,
+    frame_id: int | None,
+    json_input: dict[str, Any] | None,
+    dry_run: bool,
 ) -> None:
     """マーカー削除。"""
     if json_input:
         data = MarkerDeleteInput.model_validate(json_input)
         frame_id = data.frame_id
     if frame_id is None:
-        raise click.UsageError(
-            "FRAME_ID is required (positional argument or --json)"
-        )
+        raise click.UsageError("FRAME_ID is required (positional argument or --json)")
     result = marker_delete_impl(frame_id=frame_id, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
 
@@ -993,7 +992,9 @@ register_schema(
     output_model=TimelineDuplicateOutput,
     input_model=TimelineDuplicateInput,
 )
-register_schema("timeline.detect-scene-cuts", output_model=TimelineDetectSceneCutsOutput)
+register_schema(
+    "timeline.detect-scene-cuts", output_model=TimelineDetectSceneCutsOutput
+)
 register_schema("timeline.create-subtitles", output_model=TimelineCreateSubtitlesOutput)
 register_schema("timeline.track.list", output_model=TrackListItem)
 register_schema(

@@ -2,6 +2,7 @@
 
 パッチパスは各コマンドモジュールの get_resolve を使用する（point-of-use patching）。
 """
+
 import asyncio
 import contextlib
 import json
@@ -60,9 +61,7 @@ class TestProjectSmoke:
         assert result.exit_code == 0
 
     def test_open_dry_run(self, runner, mock_resolve):
-        result = runner.invoke(
-            dr, ["project", "open", "Demo Project", "--dry-run"]
-        )
+        result = runner.invoke(dr, ["project", "open", "Demo Project", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -82,9 +81,7 @@ class TestTimelineSmoke:
         assert result.exit_code == 0
 
     def test_switch_dry_run(self, runner, mock_resolve):
-        result = runner.invoke(
-            dr, ["timeline", "switch", "Main Edit", "--dry-run"]
-        )
+        result = runner.invoke(dr, ["timeline", "switch", "Main Edit", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -120,9 +117,7 @@ class TestColorSmoke:
 
 class TestMediaSmoke:
     def test_list(self, runner, mock_resolve):
-        result = runner.invoke(
-            dr, ["media", "list", "--fields", "clip_name"]
-        )
+        result = runner.invoke(dr, ["media", "list", "--fields", "clip_name"])
         assert result.exit_code == 0
 
     def test_folder_list(self, runner, mock_resolve):
@@ -175,10 +170,12 @@ class TestSchemaSmoke:
 class TestMCPSmoke:
     def test_mcp_server_importable(self):
         from davinci_cli.mcp.mcp_server import mcp
+
         assert mcp is not None
 
     def test_mcp_has_deliver_start_tool(self):
         from davinci_cli.mcp.mcp_server import mcp
+
         tools = asyncio.run(mcp.list_tools())
         tool_names = [t.name for t in tools]
         assert "deliver_start" in tool_names

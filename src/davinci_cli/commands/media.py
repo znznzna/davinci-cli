@@ -2,6 +2,7 @@
 
 パス検証は core/validation.py の validate_path() を使用する。
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -193,7 +194,7 @@ def _find_clips_by_names(media_pool: Any, clip_names: list[str]) -> list[Any]:
 def media_list_impl(
     folder_name: str | None = None,
     fields: list[str] | None = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     media_pool = _get_media_pool()
 
     if folder_name:
@@ -207,7 +208,7 @@ def media_list_impl(
         folder = media_pool.GetRootFolder()
 
     clips = folder.GetClipList() or []
-    items: list[dict] = []
+    items: list[dict[str, Any]] = []
     for clip in clips:
         info = {
             "clip_name": clip.GetName(),
@@ -221,7 +222,7 @@ def media_list_impl(
     return items
 
 
-def media_import_impl(paths: list[str]) -> dict:
+def media_import_impl(paths: list[str]) -> dict[str, Any]:
     validated: list[str] = []
     for p in paths:
         vp = validate_path(p)
@@ -240,20 +241,22 @@ def media_import_impl(paths: list[str]) -> dict:
     }
 
 
-def folder_list_impl() -> list[dict]:
+def folder_list_impl() -> list[dict[str, Any]]:
     media_pool = _get_media_pool()
     root = media_pool.GetRootFolder()
-    folders: list[dict] = []
+    folders: list[dict[str, Any]] = []
     for sub in root.GetSubFolderList() or []:
         clips = sub.GetClipList() or []
-        folders.append({
-            "name": sub.GetName(),
-            "clip_count": len(clips),
-        })
+        folders.append(
+            {
+                "name": sub.GetName(),
+                "clip_count": len(clips),
+            }
+        )
     return folders
 
 
-def folder_create_impl(name: str) -> dict:
+def folder_create_impl(name: str) -> dict[str, Any]:
     media_pool = _get_media_pool()
     folder = media_pool.AddSubFolder(media_pool.GetRootFolder(), name)
     if not folder:
@@ -264,15 +267,13 @@ def folder_create_impl(name: str) -> dict:
     return {"created": name}
 
 
-def folder_delete_impl(name: str, dry_run: bool = False) -> dict:
+def folder_delete_impl(name: str, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "folder_delete", "name": name}
     media_pool = _get_media_pool()
     folder = _find_folder_by_name(media_pool.GetRootFolder(), name)
     if not folder:
-        raise ValidationError(
-            field="name", reason=f"Folder not found: {name}"
-        )
+        raise ValidationError(field="name", reason=f"Folder not found: {name}")
     result = media_pool.DeleteFolders([folder])
     if not result:
         raise ValidationError(
@@ -286,7 +287,7 @@ def media_move_impl(
     clip_names: list[str],
     target_folder: str,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -318,7 +319,7 @@ def media_move_impl(
 def media_delete_impl(
     clip_names: list[str],
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -343,7 +344,7 @@ def media_relink_impl(
     clip_names: list[str],
     folder_path: str,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     validated_path = str(validate_path(folder_path))
     if dry_run:
         return {
@@ -367,7 +368,7 @@ def media_relink_impl(
     }
 
 
-def media_unlink_impl(clip_names: list[str]) -> dict:
+def media_unlink_impl(clip_names: list[str]) -> dict[str, Any]:
     media_pool = _get_media_pool()
     clips = _find_clips_by_names(media_pool, clip_names)
     result = media_pool.UnlinkClips(clips)
@@ -385,13 +386,14 @@ def media_unlink_impl(clip_names: list[str]) -> dict:
 def media_metadata_get_impl(
     clip_name: str,
     key: str | None = None,
-) -> dict:
+) -> dict[str, Any]:
     media_pool = _get_media_pool()
     clip = _find_clips_by_names(media_pool, [clip_name])[0]
     if key is not None:
         value = clip.GetMetadata(key)
         return {"key": key, "value": value}
-    return clip.GetMetadata()
+    result: dict[str, Any] = clip.GetMetadata()
+    return result
 
 
 def media_metadata_set_impl(
@@ -399,7 +401,7 @@ def media_metadata_set_impl(
     key: str,
     value: str,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -427,7 +429,7 @@ def media_metadata_set_impl(
 def media_export_metadata_impl(
     file_name: str,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     validated = validate_path(file_name)
     if dry_run:
         return {
@@ -443,7 +445,7 @@ def media_export_metadata_impl(
     }
 
 
-def media_transcribe_impl(clip_name: str) -> dict:
+def media_transcribe_impl(clip_name: str) -> dict[str, Any]:
     media_pool = _get_media_pool()
     clip = _find_clips_by_names(media_pool, [clip_name])[0]
     result = clip.TranscribeAudio()
@@ -508,9 +510,7 @@ def folder_create_cmd(ctx: click.Context, name: str) -> None:
 @click.argument("name")
 @dry_run_option
 @click.pass_context
-def folder_delete_cmd(
-    ctx: click.Context, name: str, dry_run: bool
-) -> None:
+def folder_delete_cmd(ctx: click.Context, name: str, dry_run: bool) -> None:
     """フォルダ削除。"""
     result = folder_delete_impl(name=name, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
@@ -579,9 +579,7 @@ def media_metadata() -> None:
 @click.argument("clip_name")
 @click.option("--key", default=None, help="Metadata key to retrieve")
 @click.pass_context
-def media_metadata_get_cmd(
-    ctx: click.Context, clip_name: str, key: str | None
-) -> None:
+def media_metadata_get_cmd(ctx: click.Context, clip_name: str, key: str | None) -> None:
     """クリップのメタデータを取得。"""
     result = media_metadata_get_impl(clip_name=clip_name, key=key)
     output(result, pretty=ctx.obj.get("pretty"))

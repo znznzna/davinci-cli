@@ -172,7 +172,9 @@ class TestDeliverExtendedImpl:
         assert result["job_id"] == "job-001"
 
     def test_delete_job(self, mock_resolve):
-        mock_resolve.GetProjectManager().GetCurrentProject().DeleteRenderJob.return_value = True
+        mock_resolve.GetProjectManager().GetCurrentProject().DeleteRenderJob.return_value = (
+            True
+        )
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = deliver_delete_job_impl(job_id="job-001")
         assert result["deleted"] is True
@@ -184,7 +186,9 @@ class TestDeliverExtendedImpl:
         assert result["action"] == "delete_all_jobs"
 
     def test_delete_all_jobs(self, mock_resolve):
-        mock_resolve.GetProjectManager().GetCurrentProject().DeleteAllRenderJobs.return_value = True
+        mock_resolve.GetProjectManager().GetCurrentProject().DeleteAllRenderJobs.return_value = (
+            True
+        )
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = deliver_delete_all_jobs_impl()
         assert result["deleted_all"] is True
@@ -262,8 +266,16 @@ class TestDeliverStatusImpl:
 
         def mock_job_status(job_id):
             statuses = {
-                "job-001": {"JobStatus": "Complete", "CompletionPercentage": 100, "EstimatedTimeRemainingInMs": 0},
-                "job-002": {"JobStatus": "Rendering", "CompletionPercentage": 50, "EstimatedTimeRemainingInMs": 30000},
+                "job-001": {
+                    "JobStatus": "Complete",
+                    "CompletionPercentage": 100,
+                    "EstimatedTimeRemainingInMs": 0,
+                },
+                "job-002": {
+                    "JobStatus": "Rendering",
+                    "CompletionPercentage": 50,
+                    "EstimatedTimeRemainingInMs": 30000,
+                },
             }
             return statuses.get(job_id, {})
 

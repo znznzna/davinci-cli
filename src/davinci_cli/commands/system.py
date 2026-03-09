@@ -6,6 +6,8 @@ Resolve 接続は core.connection を使用する。
 
 from __future__ import annotations
 
+from typing import Any
+
 import click
 from pydantic import BaseModel
 
@@ -25,14 +27,14 @@ def system() -> None:
     """System information commands."""
 
 
-def ping_impl() -> dict:
+def ping_impl() -> dict[str, Any]:
     """Resolve 接続確認。"""
     resolve = get_resolve()
     version = resolve.GetVersionString()
     return {"status": "ok", "version": version}
 
 
-def version_impl() -> dict:
+def version_impl() -> dict[str, Any]:
     """バージョン情報を返す。"""
     resolve = get_resolve()
     return {
@@ -41,7 +43,7 @@ def version_impl() -> dict:
     }
 
 
-def edition_impl() -> dict:
+def edition_impl() -> dict[str, Any]:
     """エディション情報を返す。"""
     resolve = get_resolve()
     return {
@@ -49,7 +51,7 @@ def edition_impl() -> dict:
     }
 
 
-def info_impl() -> dict:
+def info_impl() -> dict[str, Any]:
     """総合情報を返す。"""
     resolve = get_resolve()
     pm = resolve.GetProjectManager()
@@ -61,13 +63,13 @@ def info_impl() -> dict:
     }
 
 
-def page_get_impl() -> dict:
+def page_get_impl() -> dict[str, Any]:
     """現在のページを取得する。"""
     resolve = get_resolve()
     return {"page": resolve.GetCurrentPage()}
 
 
-def page_set_impl(page: str, dry_run: bool = False) -> dict:
+def page_set_impl(page: str, dry_run: bool = False) -> dict[str, Any]:
     """ページを切り替える。"""
     if page not in _VALID_PAGES:
         raise ValidationError(
@@ -83,14 +85,14 @@ def page_set_impl(page: str, dry_run: bool = False) -> dict:
     return {"set": True, "page": page}
 
 
-def keyframe_mode_get_impl() -> dict:
+def keyframe_mode_get_impl() -> dict[str, Any]:
     """現在のキーフレームモードを取得する。"""
     resolve = get_resolve()
     mode = resolve.GetKeyframeMode()
     return {"mode": mode, "label": _KEYFRAME_MODES.get(mode, "unknown")}
 
 
-def keyframe_mode_set_impl(mode: int, dry_run: bool = False) -> dict:
+def keyframe_mode_set_impl(mode: int, dry_run: bool = False) -> dict[str, Any]:
     """キーフレームモードを設定する。"""
     if mode not in _KEYFRAME_MODES:
         raise ValidationError(

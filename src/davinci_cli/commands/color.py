@@ -3,6 +3,7 @@
 パス検証は core/validation.py の validate_path() を使用する。
 allowed_extensions で LUT ファイルの拡張子を制限する。
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -258,9 +259,7 @@ def _get_node_graph(tl: Any, clip_index: int) -> Any:
     clip_item = _get_clip_item_by_index(tl, clip_index)
     graph = clip_item.GetNodeGraph()
     if not graph:
-        raise ValidationError(
-            field="graph", reason="Failed to get node graph for clip"
-        )
+        raise ValidationError(field="graph", reason="Failed to get node graph for clip")
     return graph
 
 
@@ -271,7 +270,7 @@ def color_apply_lut_impl(
     clip_index: int,
     lut_path: str,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     validated = validate_path(lut_path, allowed_extensions=_LUT_EXTENSIONS)
     if not validated.exists():
         raise ValidationError(
@@ -296,7 +295,7 @@ def color_apply_lut_impl(
     return {"applied": str(validated), "clip_index": clip_index}
 
 
-def color_reset_impl(clip_index: int, dry_run: bool = False) -> dict:
+def color_reset_impl(clip_index: int, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "reset", "clip_index": clip_index}
     tl = _get_current_timeline()
@@ -309,7 +308,7 @@ def color_copy_grade_impl(
     from_index: int,
     to_index: int,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -329,18 +328,18 @@ def color_copy_grade_impl(
     return {"copied_from": from_index, "copied_to": to_index}
 
 
-def node_list_impl(clip_index: int) -> list[dict]:
+def node_list_impl(clip_index: int) -> list[dict[str, Any]]:
     tl = _get_current_timeline()
     clip_item = _get_clip_item_by_index(tl, clip_index)
     node_count = clip_item.GetNumNodes()
-    result: list[dict] = []
+    result: list[dict[str, Any]] = []
     for i in range(1, node_count + 1):
         label = clip_item.GetNodeLabel(i)
         result.append({"index": i, "label": label or f"Node {i}"})
     return result
 
 
-def still_grab_impl(clip_index: int, dry_run: bool = False) -> dict:
+def still_grab_impl(clip_index: int, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -361,17 +360,18 @@ def still_grab_impl(clip_index: int, dry_run: bool = False) -> dict:
 
 def color_version_list_impl(
     clip_index: int, version_type: int = 0
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     tl = _get_current_timeline()
     clip_item = _get_clip_item_by_index(tl, clip_index)
     names = clip_item.GetVersionNameList(version_type) or []
     return [{"name": n, "version_type": version_type} for n in names]
 
 
-def color_version_current_impl(clip_index: int) -> dict:
+def color_version_current_impl(clip_index: int) -> dict[str, Any]:
     tl = _get_current_timeline()
     clip_item = _get_clip_item_by_index(tl, clip_index)
-    return clip_item.GetCurrentVersion()
+    result: dict[str, Any] = clip_item.GetCurrentVersion()
+    return result
 
 
 def color_version_add_impl(
@@ -379,7 +379,7 @@ def color_version_add_impl(
     name: str,
     version_type: int = 0,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -409,7 +409,7 @@ def color_version_load_impl(
     name: str,
     version_type: int = 0,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -439,7 +439,7 @@ def color_version_delete_impl(
     name: str,
     version_type: int = 0,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -470,7 +470,7 @@ def color_version_rename_impl(
     new_name: str,
     version_type: int = 0,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -497,7 +497,7 @@ def color_version_rename_impl(
     }
 
 
-def still_list_impl() -> list[dict]:
+def still_list_impl() -> list[dict[str, Any]]:
     resolve = get_resolve()
     pm = resolve.GetProjectManager()
     project = pm.GetCurrentProject()
@@ -510,7 +510,7 @@ def still_list_impl() -> list[dict]:
     if not album:
         return []
     stills = album.GetStills() or []
-    result: list[dict] = []
+    result: list[dict[str, Any]] = []
     for i, s in enumerate(stills):
         label_fn = getattr(s, "GetLabel", None)
         label = label_fn() if label_fn else f"Still {i}"
@@ -526,7 +526,7 @@ def color_cdl_set_impl(
     power: str,
     saturation: str,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -554,7 +554,7 @@ def color_lut_export_impl(
     export_type: int,
     path: str,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     validated = validate_path(path)
     if dry_run:
         return {
@@ -567,22 +567,18 @@ def color_lut_export_impl(
     clip_item = _get_clip_item_by_index(tl, clip_index)
     result = clip_item.ExportLUT(export_type, str(validated))
     if result is False:
-        raise ValidationError(
-            field="path", reason=f"Failed to export LUT to: {path}"
-        )
+        raise ValidationError(field="path", reason=f"Failed to export LUT to: {path}")
     return {"exported": True, "clip_index": clip_index, "path": str(validated)}
 
 
-def color_reset_all_impl(clip_index: int, dry_run: bool = False) -> dict:
+def color_reset_all_impl(clip_index: int, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "reset_all", "clip_index": clip_index}
     tl = _get_current_timeline()
     graph = _get_node_graph(tl, clip_index)
     result = graph.ResetAllGrades()
     if result is False:
-        raise ValidationError(
-            field="reset_all", reason="Failed to reset all grades"
-        )
+        raise ValidationError(field="reset_all", reason="Failed to reset all grades")
     return {"reset": True, "clip_index": clip_index}
 
 
@@ -591,7 +587,7 @@ def node_lut_set_impl(
     node_index: int,
     lut_path: str,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     validated = validate_path(lut_path, allowed_extensions=_LUT_EXTENSIONS)
     if not validated.exists():
         raise ValidationError(
@@ -622,7 +618,7 @@ def node_lut_set_impl(
     }
 
 
-def node_lut_get_impl(clip_index: int, node_index: int) -> dict:
+def node_lut_get_impl(clip_index: int, node_index: int) -> dict[str, Any]:
     tl = _get_current_timeline()
     graph = _get_node_graph(tl, clip_index)
     lut_path = graph.GetLUT(node_index)
@@ -638,7 +634,7 @@ def node_enable_impl(
     node_index: int,
     enabled: bool,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -690,9 +686,7 @@ def apply_lut(
 @click.argument("clip_index", type=int)
 @dry_run_option
 @click.pass_context
-def color_reset(
-    ctx: click.Context, clip_index: int, dry_run: bool
-) -> None:
+def color_reset(ctx: click.Context, clip_index: int, dry_run: bool) -> None:
     """グレードをリセットする。"""
     result = color_reset_impl(clip_index=clip_index, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
@@ -719,9 +713,7 @@ def copy_grade(
 @click.option("--slope", type=str, required=True, help="Slope (e.g. '0.5 0.4 0.2')")
 @click.option("--offset", type=str, required=True, help="Offset (e.g. '0.4 0.3 0.2')")
 @click.option("--power", type=str, required=True, help="Power (e.g. '0.6 0.7 0.8')")
-@click.option(
-    "--saturation", type=str, required=True, help="Saturation (e.g. '0.65')"
-)
+@click.option("--saturation", type=str, required=True, help="Saturation (e.g. '0.65')")
 @dry_run_option
 @click.pass_context
 def cdl_cmd(
@@ -774,9 +766,7 @@ def lut_export_cmd(
 @click.argument("clip_index", type=int)
 @dry_run_option
 @click.pass_context
-def reset_all_cmd(
-    ctx: click.Context, clip_index: int, dry_run: bool
-) -> None:
+def reset_all_cmd(ctx: click.Context, clip_index: int, dry_run: bool) -> None:
     """全グレードをリセットする（Graph.ResetAllGrades）。"""
     result = color_reset_all_impl(clip_index=clip_index, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
@@ -828,9 +818,7 @@ def node_lut_set_cmd(
 @click.argument("clip_index", type=int)
 @click.argument("node_index", type=int)
 @click.pass_context
-def node_lut_get_cmd(
-    ctx: click.Context, clip_index: int, node_index: int
-) -> None:
+def node_lut_get_cmd(ctx: click.Context, clip_index: int, node_index: int) -> None:
     """ノードの LUT を取得する。"""
     result = node_lut_get_impl(clip_index=clip_index, node_index=node_index)
     output(result, pretty=ctx.obj.get("pretty"))
@@ -868,9 +856,7 @@ def color_still() -> None:
 @click.argument("clip_index", type=int)
 @dry_run_option
 @click.pass_context
-def still_grab_cmd(
-    ctx: click.Context, clip_index: int, dry_run: bool
-) -> None:
+def still_grab_cmd(ctx: click.Context, clip_index: int, dry_run: bool) -> None:
     """スチルを取得する。"""
     result = still_grab_impl(clip_index=clip_index, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
@@ -893,13 +879,9 @@ def color_version() -> None:
 @click.argument("clip_index", type=int)
 @click.option("--version-type", type=int, default=0, help="0=local, 1=remote")
 @click.pass_context
-def version_list_cmd(
-    ctx: click.Context, clip_index: int, version_type: int
-) -> None:
+def version_list_cmd(ctx: click.Context, clip_index: int, version_type: int) -> None:
     """バージョン一覧。"""
-    result = color_version_list_impl(
-        clip_index=clip_index, version_type=version_type
-    )
+    result = color_version_list_impl(clip_index=clip_index, version_type=version_type)
     output(result, pretty=ctx.obj.get("pretty"))
 
 

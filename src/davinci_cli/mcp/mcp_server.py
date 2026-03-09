@@ -5,6 +5,7 @@ Design:
   - Each tool description includes metadata tags: [risk_level], [mutating], [supports_dry_run]
   - mcp_error_handler catches exceptions and returns structured error responses
 """
+
 from __future__ import annotations
 
 import functools
@@ -138,7 +139,7 @@ from davinci_cli.mcp.instructions import INSTRUCTIONS
 # --- Error Handler ---
 
 
-def mcp_error_handler(func: Callable) -> Callable:
+def mcp_error_handler(func: Callable[..., Any]) -> Callable[..., Any]:
     """MCP tool 用エラーハンドリングラッパー。"""
 
     @functools.wraps(func)
@@ -179,7 +180,7 @@ mcp = FastMCP("davinci-cli", instructions=INSTRUCTIONS)
     )
 )
 @mcp_error_handler
-def system_ping() -> dict:
+def system_ping() -> dict[str, Any]:
     return ping_impl()
 
 
@@ -191,7 +192,7 @@ def system_ping() -> dict:
     )
 )
 @mcp_error_handler
-def system_version() -> dict:
+def system_version() -> dict[str, Any]:
     return version_impl()
 
 
@@ -203,7 +204,7 @@ def system_version() -> dict:
     )
 )
 @mcp_error_handler
-def system_edition() -> dict:
+def system_edition() -> dict[str, Any]:
     return edition_impl()
 
 
@@ -215,7 +216,7 @@ def system_edition() -> dict:
     )
 )
 @mcp_error_handler
-def system_info() -> dict:
+def system_info() -> dict[str, Any]:
     return info_impl()
 
 
@@ -227,7 +228,7 @@ def system_info() -> dict:
     )
 )
 @mcp_error_handler
-def system_page_get() -> dict:
+def system_page_get() -> dict[str, Any]:
     return page_get_impl()
 
 
@@ -240,7 +241,7 @@ def system_page_get() -> dict:
     )
 )
 @mcp_error_handler
-def system_page_set(page: str, dry_run: bool = True) -> dict:
+def system_page_set(page: str, dry_run: bool = True) -> dict[str, Any]:
     return page_set_impl(page=page, dry_run=dry_run)
 
 
@@ -252,7 +253,7 @@ def system_page_set(page: str, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def system_keyframe_mode_get() -> dict:
+def system_keyframe_mode_get() -> dict[str, Any]:
     return keyframe_mode_get_impl()
 
 
@@ -265,7 +266,7 @@ def system_keyframe_mode_get() -> dict:
     )
 )
 @mcp_error_handler
-def system_keyframe_mode_set(mode: int, dry_run: bool = True) -> dict:
+def system_keyframe_mode_set(mode: int, dry_run: bool = True) -> dict[str, Any]:
     return keyframe_mode_set_impl(mode=mode, dry_run=dry_run)
 
 
@@ -281,7 +282,7 @@ def system_keyframe_mode_set(mode: int, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def project_list(fields: str | None = None) -> list[dict]:
+def project_list(fields: str | None = None) -> list[dict[str, Any]]:
     field_list = fields.split(",") if fields else None
     return project_list_impl(fields=field_list)
 
@@ -296,7 +297,7 @@ def project_list(fields: str | None = None) -> list[dict]:
     )
 )
 @mcp_error_handler
-def project_open(name: str, dry_run: bool = True) -> dict:
+def project_open(name: str, dry_run: bool = True) -> dict[str, Any]:
     return project_open_impl(name=name, dry_run=dry_run)
 
 
@@ -309,7 +310,7 @@ def project_open(name: str, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def project_close(dry_run: bool = True) -> dict:
+def project_close(dry_run: bool = True) -> dict[str, Any]:
     return project_close_impl(dry_run=dry_run)
 
 
@@ -321,7 +322,7 @@ def project_close(dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def project_create(name: str, dry_run: bool = True) -> dict:
+def project_create(name: str, dry_run: bool = True) -> dict[str, Any]:
     return project_create_impl(name=name, dry_run=dry_run)
 
 
@@ -336,7 +337,7 @@ def project_create(name: str, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def project_delete(name: str, dry_run: bool = True) -> dict:
+def project_delete(name: str, dry_run: bool = True) -> dict[str, Any]:
     return project_delete_impl(name=name, dry_run=dry_run)
 
 
@@ -348,7 +349,7 @@ def project_delete(name: str, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def project_rename(name: str, dry_run: bool = True) -> dict:
+def project_rename(name: str, dry_run: bool = True) -> dict[str, Any]:
     return project_rename_impl(name=name, dry_run=dry_run)
 
 
@@ -360,7 +361,7 @@ def project_rename(name: str, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def project_save() -> dict:
+def project_save() -> dict[str, Any]:
     return project_save_impl()
 
 
@@ -373,7 +374,7 @@ def project_save() -> dict:
     )
 )
 @mcp_error_handler
-def project_info(fields: str | None = None) -> dict:
+def project_info(fields: str | None = None) -> dict[str, Any]:
     field_list = fields.split(",") if fields else None
     return project_info_impl(fields=field_list)
 
@@ -387,7 +388,7 @@ def project_info(fields: str | None = None) -> dict:
     )
 )
 @mcp_error_handler
-def project_settings_get(key: str | None = None) -> dict:
+def project_settings_get(key: str | None = None) -> dict[str, Any]:
     return project_settings_get_impl(key=key)
 
 
@@ -400,7 +401,7 @@ def project_settings_get(key: str | None = None) -> dict:
     )
 )
 @mcp_error_handler
-def project_settings_set(key: str, value: str, dry_run: bool = True) -> dict:
+def project_settings_set(key: str, value: str, dry_run: bool = True) -> dict[str, Any]:
     return project_settings_set_impl(key=key, value=value, dry_run=dry_run)
 
 
@@ -416,7 +417,7 @@ def project_settings_set(key: str, value: str, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def timeline_list(fields: str | None = None) -> list[dict]:
+def timeline_list(fields: str | None = None) -> list[dict[str, Any]]:
     field_list = fields.split(",") if fields else None
     return timeline_list_impl(fields=field_list)
 
@@ -430,7 +431,7 @@ def timeline_list(fields: str | None = None) -> list[dict]:
     )
 )
 @mcp_error_handler
-def timeline_current(fields: str | None = None) -> dict:
+def timeline_current(fields: str | None = None) -> dict[str, Any]:
     field_list = fields.split(",") if fields else None
     return timeline_current_impl(fields=field_list)
 
@@ -445,7 +446,7 @@ def timeline_current(fields: str | None = None) -> dict:
     )
 )
 @mcp_error_handler
-def timeline_switch(name: str, dry_run: bool = True) -> dict:
+def timeline_switch(name: str, dry_run: bool = True) -> dict[str, Any]:
     return timeline_switch_impl(name=name, dry_run=dry_run)
 
 
@@ -457,7 +458,7 @@ def timeline_switch(name: str, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def timeline_create(name: str, dry_run: bool = True) -> dict:
+def timeline_create(name: str, dry_run: bool = True) -> dict[str, Any]:
     return timeline_create_impl(name=name, dry_run=dry_run)
 
 
@@ -470,7 +471,7 @@ def timeline_create(name: str, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def timeline_delete(name: str, dry_run: bool = True) -> dict:
+def timeline_delete(name: str, dry_run: bool = True) -> dict[str, Any]:
     return timeline_delete_impl(name=name, dry_run=dry_run)
 
 
@@ -482,7 +483,7 @@ def timeline_delete(name: str, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def timeline_timecode_get() -> dict:
+def timeline_timecode_get() -> dict[str, Any]:
     return timecode_get_impl()
 
 
@@ -495,7 +496,7 @@ def timeline_timecode_get() -> dict:
     )
 )
 @mcp_error_handler
-def timeline_timecode_set(timecode: str, dry_run: bool = True) -> dict:
+def timeline_timecode_set(timecode: str, dry_run: bool = True) -> dict[str, Any]:
     return timecode_set_impl(timecode=timecode, dry_run=dry_run)
 
 
@@ -507,7 +508,7 @@ def timeline_timecode_set(timecode: str, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def timeline_current_item() -> dict:
+def timeline_current_item() -> dict[str, Any]:
     return current_item_impl()
 
 
@@ -519,7 +520,7 @@ def timeline_current_item() -> dict:
     )
 )
 @mcp_error_handler
-def timeline_track_list() -> list[dict]:
+def timeline_track_list() -> list[dict[str, Any]]:
     return track_list_impl()
 
 
@@ -531,7 +532,7 @@ def timeline_track_list() -> list[dict]:
     )
 )
 @mcp_error_handler
-def timeline_track_add(track_type: str, dry_run: bool = True) -> dict:
+def timeline_track_add(track_type: str, dry_run: bool = True) -> dict[str, Any]:
     return track_add_impl(track_type=track_type, dry_run=dry_run)
 
 
@@ -546,10 +547,8 @@ def timeline_track_add(track_type: str, dry_run: bool = True) -> dict:
 @mcp_error_handler
 def timeline_track_delete(
     track_type: str, track_index: int, dry_run: bool = True
-) -> dict:
-    return track_delete_impl(
-        track_type=track_type, index=track_index, dry_run=dry_run
-    )
+) -> dict[str, Any]:
+    return track_delete_impl(track_type=track_type, index=track_index, dry_run=dry_run)
 
 
 @mcp.tool(
@@ -564,10 +563,8 @@ def timeline_track_delete(
 @mcp_error_handler
 def timeline_track_enable(
     track_type: str, track_index: int, enabled: bool | None = None
-) -> dict:
-    return track_enable_impl(
-        track_type=track_type, index=track_index, enabled=enabled
-    )
+) -> dict[str, Any]:
+    return track_enable_impl(track_type=track_type, index=track_index, enabled=enabled)
 
 
 @mcp.tool(
@@ -582,10 +579,8 @@ def timeline_track_enable(
 @mcp_error_handler
 def timeline_track_lock(
     track_type: str, track_index: int, locked: bool | None = None
-) -> dict:
-    return track_lock_impl(
-        track_type=track_type, index=track_index, locked=locked
-    )
+) -> dict[str, Any]:
+    return track_lock_impl(track_type=track_type, index=track_index, locked=locked)
 
 
 @mcp.tool(
@@ -596,7 +591,7 @@ def timeline_track_lock(
     )
 )
 @mcp_error_handler
-def timeline_duplicate(name: str | None = None, dry_run: bool = True) -> dict:
+def timeline_duplicate(name: str | None = None, dry_run: bool = True) -> dict[str, Any]:
     return timeline_duplicate_impl(name=name, dry_run=dry_run)
 
 
@@ -609,7 +604,7 @@ def timeline_duplicate(name: str | None = None, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def timeline_detect_scene_cuts() -> dict:
+def timeline_detect_scene_cuts() -> dict[str, Any]:
     return timeline_detect_scene_cuts_impl()
 
 
@@ -622,7 +617,7 @@ def timeline_detect_scene_cuts() -> dict:
     )
 )
 @mcp_error_handler
-def timeline_create_subtitles() -> dict:
+def timeline_create_subtitles() -> dict[str, Any]:
     return timeline_create_subtitles_impl()
 
 
@@ -641,7 +636,7 @@ def timeline_export(
     output_path: str,
     timeline_name: str | None = None,
     dry_run: bool = True,
-) -> dict:
+) -> dict[str, Any]:
     return timeline_export_impl(
         format=format,
         output_path=output_path,
@@ -658,7 +653,7 @@ def timeline_export(
     )
 )
 @mcp_error_handler
-def timeline_marker_list(timeline_name: str | None = None) -> list[dict]:
+def timeline_marker_list(timeline_name: str | None = None) -> list[dict[str, Any]]:
     return marker_list_impl(timeline_name=timeline_name)
 
 
@@ -680,7 +675,7 @@ def timeline_marker_add(
     note: str | None = None,
     duration: int = 1,
     dry_run: bool = True,
-) -> dict:
+) -> dict[str, Any]:
     return marker_add_impl(
         frame_id=frame_id,
         color=color,
@@ -700,7 +695,7 @@ def timeline_marker_add(
     )
 )
 @mcp_error_handler
-def timeline_marker_delete(frame_id: int, dry_run: bool = True) -> dict:
+def timeline_marker_delete(frame_id: int, dry_run: bool = True) -> dict[str, Any]:
     return marker_delete_impl(frame_id=frame_id, dry_run=dry_run)
 
 
@@ -723,7 +718,7 @@ def timeline_marker_beats(
     name: str = "",
     duration: int = 1,
     dry_run: bool = True,
-) -> dict:
+) -> dict[str, Any]:
     return beat_marker_impl(
         bpm=bpm,
         clip_index=clip_index,
@@ -748,7 +743,7 @@ def timeline_marker_beats(
     )
 )
 @mcp_error_handler
-def clip_list(fields: str | None = None) -> list[dict]:
+def clip_list(fields: str | None = None) -> list[dict[str, Any]]:
     field_list = fields.split(",") if fields else None
     return clip_list_impl(fields=field_list)
 
@@ -762,7 +757,7 @@ def clip_list(fields: str | None = None) -> list[dict]:
     )
 )
 @mcp_error_handler
-def clip_info(index: int) -> dict:
+def clip_info(index: int) -> dict[str, Any]:
     return clip_info_impl(index=index)
 
 
@@ -775,7 +770,7 @@ def clip_info(index: int) -> dict:
     )
 )
 @mcp_error_handler
-def clip_select(index: int) -> dict:
+def clip_select(index: int) -> dict[str, Any]:
     return clip_select_impl(index=index)
 
 
@@ -788,7 +783,7 @@ def clip_select(index: int) -> dict:
     )
 )
 @mcp_error_handler
-def clip_property_get(index: int, key: str) -> dict:
+def clip_property_get(index: int, key: str) -> dict[str, Any]:
     return clip_property_get_impl(index=index, key=key)
 
 
@@ -803,10 +798,8 @@ def clip_property_get(index: int, key: str) -> dict:
 @mcp_error_handler
 def clip_property_set(
     index: int, key: str, value: str, dry_run: bool = True
-) -> dict:
-    return clip_property_set_impl(
-        index=index, key=key, value=value, dry_run=dry_run
-    )
+) -> dict[str, Any]:
+    return clip_property_set_impl(index=index, key=key, value=value, dry_run=dry_run)
 
 
 @mcp.tool(
@@ -819,7 +812,7 @@ def clip_property_set(
     )
 )
 @mcp_error_handler
-def clip_enable(index: int, enabled: bool | None = None) -> dict:
+def clip_enable(index: int, enabled: bool | None = None) -> dict[str, Any]:
     return clip_enable_impl(index=index, enabled=enabled)
 
 
@@ -831,7 +824,7 @@ def clip_enable(index: int, enabled: bool | None = None) -> dict:
     )
 )
 @mcp_error_handler
-def clip_color_get(index: int) -> dict:
+def clip_color_get(index: int) -> dict[str, Any]:
     return clip_color_get_impl(index=index)
 
 
@@ -845,7 +838,7 @@ def clip_color_get(index: int) -> dict:
     )
 )
 @mcp_error_handler
-def clip_color_set(index: int, color: str) -> dict:
+def clip_color_set(index: int, color: str) -> dict[str, Any]:
     return clip_color_set_impl(index=index, color=color)
 
 
@@ -857,7 +850,7 @@ def clip_color_set(index: int, color: str) -> dict:
     )
 )
 @mcp_error_handler
-def clip_color_clear(index: int) -> dict:
+def clip_color_clear(index: int) -> dict[str, Any]:
     return clip_color_clear_impl(index=index)
 
 
@@ -869,7 +862,7 @@ def clip_color_clear(index: int) -> dict:
     )
 )
 @mcp_error_handler
-def clip_flag_add(index: int, color: str) -> dict:
+def clip_flag_add(index: int, color: str) -> dict[str, Any]:
     return clip_flag_add_impl(index=index, color=color)
 
 
@@ -881,7 +874,7 @@ def clip_flag_add(index: int, color: str) -> dict:
     )
 )
 @mcp_error_handler
-def clip_flag_list(index: int) -> list:
+def clip_flag_list(index: int) -> list[Any]:
     return clip_flag_list_impl(index=index)
 
 
@@ -893,7 +886,7 @@ def clip_flag_list(index: int) -> list:
     )
 )
 @mcp_error_handler
-def clip_flag_clear(index: int, color: str = "All") -> dict:
+def clip_flag_clear(index: int, color: str = "All") -> dict[str, Any]:
     return clip_flag_clear_impl(index=index, color=color)
 
 
@@ -913,7 +906,7 @@ def clip_flag_clear(index: int, color: str = "All") -> dict:
 @mcp_error_handler
 def color_apply_lut(
     clip_index: int, lut_path: str, dry_run: bool = True
-) -> dict:
+) -> dict[str, Any]:
     return color_apply_lut_impl(
         clip_index=clip_index, lut_path=lut_path, dry_run=dry_run
     )
@@ -928,7 +921,7 @@ def color_apply_lut(
     )
 )
 @mcp_error_handler
-def color_reset(clip_index: int, dry_run: bool = True) -> dict:
+def color_reset(clip_index: int, dry_run: bool = True) -> dict[str, Any]:
     return color_reset_impl(clip_index=clip_index, dry_run=dry_run)
 
 
@@ -943,7 +936,7 @@ def color_reset(clip_index: int, dry_run: bool = True) -> dict:
 @mcp_error_handler
 def color_copy_grade(
     from_index: int, to_index: int, dry_run: bool = True
-) -> dict:
+) -> dict[str, Any]:
     return color_copy_grade_impl(
         from_index=from_index, to_index=to_index, dry_run=dry_run
     )
@@ -958,10 +951,8 @@ def color_copy_grade(
     )
 )
 @mcp_error_handler
-def color_version_list(clip_index: int, version_type: int = 0) -> list[dict]:
-    return color_version_list_impl(
-        clip_index=clip_index, version_type=version_type
-    )
+def color_version_list(clip_index: int, version_type: int = 0) -> list[dict[str, Any]]:
+    return color_version_list_impl(clip_index=clip_index, version_type=version_type)
 
 
 @mcp.tool(
@@ -973,7 +964,7 @@ def color_version_list(clip_index: int, version_type: int = 0) -> list[dict]:
     )
 )
 @mcp_error_handler
-def color_version_current(clip_index: int) -> dict:
+def color_version_current(clip_index: int) -> dict[str, Any]:
     return color_version_current_impl(clip_index=clip_index)
 
 
@@ -992,7 +983,7 @@ def color_version_add(
     name: str,
     version_type: int = 0,
     dry_run: bool = True,
-) -> dict:
+) -> dict[str, Any]:
     return color_version_add_impl(
         clip_index=clip_index,
         name=name,
@@ -1015,7 +1006,7 @@ def color_version_load(
     name: str,
     version_type: int = 0,
     dry_run: bool = True,
-) -> dict:
+) -> dict[str, Any]:
     return color_version_load_impl(
         clip_index=clip_index,
         name=name,
@@ -1039,7 +1030,7 @@ def color_version_delete(
     name: str,
     version_type: int = 0,
     dry_run: bool = True,
-) -> dict:
+) -> dict[str, Any]:
     return color_version_delete_impl(
         clip_index=clip_index,
         name=name,
@@ -1063,7 +1054,7 @@ def color_version_rename(
     new_name: str,
     version_type: int = 0,
     dry_run: bool = True,
-) -> dict:
+) -> dict[str, Any]:
     return color_version_rename_impl(
         clip_index=clip_index,
         old_name=old_name,
@@ -1087,7 +1078,7 @@ def color_version_rename(
 @mcp_error_handler
 def color_node_lut_set(
     clip_index: int, node_index: int, lut_path: str, dry_run: bool = True
-) -> dict:
+) -> dict[str, Any]:
     return node_lut_set_impl(
         clip_index=clip_index,
         node_index=node_index,
@@ -1105,7 +1096,7 @@ def color_node_lut_set(
     )
 )
 @mcp_error_handler
-def color_node_lut_get(clip_index: int, node_index: int) -> dict:
+def color_node_lut_get(clip_index: int, node_index: int) -> dict[str, Any]:
     return node_lut_get_impl(clip_index=clip_index, node_index=node_index)
 
 
@@ -1121,7 +1112,7 @@ def color_node_lut_get(clip_index: int, node_index: int) -> dict:
 @mcp_error_handler
 def color_node_enable(
     clip_index: int, node_index: int, enabled: bool, dry_run: bool = True
-) -> dict:
+) -> dict[str, Any]:
     return node_enable_impl(
         clip_index=clip_index,
         node_index=node_index,
@@ -1149,7 +1140,7 @@ def color_cdl_set(
     power: str,
     saturation: str,
     dry_run: bool = True,
-) -> dict:
+) -> dict[str, Any]:
     return color_cdl_set_impl(
         clip_index=clip_index,
         node_index=node_index,
@@ -1173,7 +1164,7 @@ def color_cdl_set(
 @mcp_error_handler
 def color_lut_export(
     clip_index: int, export_type: int, path: str, dry_run: bool = True
-) -> dict:
+) -> dict[str, Any]:
     return color_lut_export_impl(
         clip_index=clip_index,
         export_type=export_type,
@@ -1192,7 +1183,7 @@ def color_lut_export(
     )
 )
 @mcp_error_handler
-def color_reset_all(clip_index: int, dry_run: bool = True) -> dict:
+def color_reset_all(clip_index: int, dry_run: bool = True) -> dict[str, Any]:
     return color_reset_all_impl(clip_index=clip_index, dry_run=dry_run)
 
 
@@ -1204,7 +1195,7 @@ def color_reset_all(clip_index: int, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def color_still_grab(clip_index: int, dry_run: bool = True) -> dict:
+def color_still_grab(clip_index: int, dry_run: bool = True) -> dict[str, Any]:
     return still_grab_impl(clip_index=clip_index, dry_run=dry_run)
 
 
@@ -1216,7 +1207,7 @@ def color_still_grab(clip_index: int, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def color_still_list() -> list[dict]:
+def color_still_list() -> list[dict[str, Any]]:
     return still_list_impl()
 
 
@@ -1234,7 +1225,7 @@ def color_still_list() -> list[dict]:
 @mcp_error_handler
 def media_list(
     folder: str | None = None, fields: str | None = None
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     field_list = fields.split(",") if fields else None
     return media_list_impl(folder_name=folder, fields=field_list)
 
@@ -1248,7 +1239,7 @@ def media_list(
     )
 )
 @mcp_error_handler
-def media_import(paths: list[str]) -> dict:
+def media_import(paths: list[str]) -> dict[str, Any]:
     return media_import_impl(paths=paths)
 
 
@@ -1263,7 +1254,7 @@ def media_import(paths: list[str]) -> dict:
 @mcp_error_handler
 def media_move(
     clip_names: list[str], target_folder: str, dry_run: bool = True
-) -> dict:
+) -> dict[str, Any]:
     return media_move_impl(
         clip_names=clip_names, target_folder=target_folder, dry_run=dry_run
     )
@@ -1279,7 +1270,7 @@ def media_move(
     )
 )
 @mcp_error_handler
-def media_delete(clip_names: list[str], dry_run: bool = True) -> dict:
+def media_delete(clip_names: list[str], dry_run: bool = True) -> dict[str, Any]:
     return media_delete_impl(clip_names=clip_names, dry_run=dry_run)
 
 
@@ -1295,7 +1286,7 @@ def media_delete(clip_names: list[str], dry_run: bool = True) -> dict:
 @mcp_error_handler
 def media_relink(
     clip_names: list[str], folder_path: str, dry_run: bool = True
-) -> dict:
+) -> dict[str, Any]:
     return media_relink_impl(
         clip_names=clip_names, folder_path=folder_path, dry_run=dry_run
     )
@@ -1310,7 +1301,7 @@ def media_relink(
     )
 )
 @mcp_error_handler
-def media_unlink(clip_names: list[str]) -> dict:
+def media_unlink(clip_names: list[str]) -> dict[str, Any]:
     return media_unlink_impl(clip_names=clip_names)
 
 
@@ -1323,7 +1314,7 @@ def media_unlink(clip_names: list[str]) -> dict:
     )
 )
 @mcp_error_handler
-def media_metadata_get(clip_name: str, key: str | None = None) -> dict:
+def media_metadata_get(clip_name: str, key: str | None = None) -> dict[str, Any]:
     return media_metadata_get_impl(clip_name=clip_name, key=key)
 
 
@@ -1337,7 +1328,7 @@ def media_metadata_get(clip_name: str, key: str | None = None) -> dict:
 @mcp_error_handler
 def media_metadata_set(
     clip_name: str, key: str, value: str, dry_run: bool = True
-) -> dict:
+) -> dict[str, Any]:
     return media_metadata_set_impl(
         clip_name=clip_name, key=key, value=value, dry_run=dry_run
     )
@@ -1352,7 +1343,7 @@ def media_metadata_set(
     )
 )
 @mcp_error_handler
-def media_export_metadata(file_name: str, dry_run: bool = True) -> dict:
+def media_export_metadata(file_name: str, dry_run: bool = True) -> dict[str, Any]:
     return media_export_metadata_impl(file_name=file_name, dry_run=dry_run)
 
 
@@ -1365,7 +1356,7 @@ def media_export_metadata(file_name: str, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def media_transcribe(clip_name: str) -> dict:
+def media_transcribe(clip_name: str) -> dict[str, Any]:
     return media_transcribe_impl(clip_name=clip_name)
 
 
@@ -1377,7 +1368,7 @@ def media_transcribe(clip_name: str) -> dict:
     )
 )
 @mcp_error_handler
-def media_folder_list() -> list[dict]:
+def media_folder_list() -> list[dict[str, Any]]:
     return folder_list_impl()
 
 
@@ -1389,7 +1380,7 @@ def media_folder_list() -> list[dict]:
     )
 )
 @mcp_error_handler
-def media_folder_create(name: str) -> dict:
+def media_folder_create(name: str) -> dict[str, Any]:
     return folder_create_impl(name=name)
 
 
@@ -1403,7 +1394,7 @@ def media_folder_create(name: str) -> dict:
     )
 )
 @mcp_error_handler
-def media_folder_delete(name: str, dry_run: bool = True) -> dict:
+def media_folder_delete(name: str, dry_run: bool = True) -> dict[str, Any]:
     return folder_delete_impl(name=name, dry_run=dry_run)
 
 
@@ -1418,7 +1409,7 @@ def media_folder_delete(name: str, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def deliver_preset_list() -> list[dict]:
+def deliver_preset_list() -> list[dict[str, Any]]:
     return deliver_preset_list_impl()
 
 
@@ -1431,7 +1422,7 @@ def deliver_preset_list() -> list[dict]:
     )
 )
 @mcp_error_handler
-def deliver_preset_load(name: str) -> dict:
+def deliver_preset_load(name: str) -> dict[str, Any]:
     return deliver_preset_load_impl(name=name)
 
 
@@ -1443,7 +1434,7 @@ def deliver_preset_load(name: str) -> dict:
     )
 )
 @mcp_error_handler
-def deliver_add_job(job_data: dict, dry_run: bool = True) -> dict:
+def deliver_add_job(job_data: dict[str, Any], dry_run: bool = True) -> dict[str, Any]:
     return deliver_add_job_impl(job_data=job_data, dry_run=dry_run)
 
 
@@ -1456,7 +1447,7 @@ def deliver_add_job(job_data: dict, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def deliver_list_jobs(fields: str | None = None) -> list[dict]:
+def deliver_list_jobs(fields: str | None = None) -> list[dict[str, Any]]:
     field_list = fields.split(",") if fields else None
     return deliver_list_jobs_impl(fields=field_list)
 
@@ -1474,7 +1465,7 @@ def deliver_list_jobs(fields: str | None = None) -> list[dict]:
 @mcp_error_handler
 def deliver_start(
     job_ids: list[str] | None = None, dry_run: bool = True
-) -> dict:
+) -> dict[str, Any]:
     return deliver_start_impl(job_ids=job_ids, dry_run=dry_run)
 
 
@@ -1486,7 +1477,7 @@ def deliver_start(
     )
 )
 @mcp_error_handler
-def deliver_stop() -> dict:
+def deliver_stop() -> dict[str, Any]:
     return deliver_stop_impl()
 
 
@@ -1498,7 +1489,7 @@ def deliver_stop() -> dict:
     )
 )
 @mcp_error_handler
-def deliver_status() -> dict:
+def deliver_status() -> dict[str, Any]:
     return deliver_status_impl()
 
 
@@ -1511,7 +1502,7 @@ def deliver_status() -> dict:
     )
 )
 @mcp_error_handler
-def deliver_delete_job(job_id: str, dry_run: bool = True) -> dict:
+def deliver_delete_job(job_id: str, dry_run: bool = True) -> dict[str, Any]:
     return deliver_delete_job_impl(job_id=job_id, dry_run=dry_run)
 
 
@@ -1524,7 +1515,7 @@ def deliver_delete_job(job_id: str, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def deliver_delete_all_jobs(dry_run: bool = True) -> dict:
+def deliver_delete_all_jobs(dry_run: bool = True) -> dict[str, Any]:
     return deliver_delete_all_jobs_impl(dry_run=dry_run)
 
 
@@ -1536,7 +1527,7 @@ def deliver_delete_all_jobs(dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def deliver_job_status(job_id: str) -> dict:
+def deliver_job_status(job_id: str) -> dict[str, Any]:
     return deliver_job_status_impl(job_id=job_id)
 
 
@@ -1548,7 +1539,7 @@ def deliver_job_status(job_id: str) -> dict:
     )
 )
 @mcp_error_handler
-def deliver_is_rendering() -> dict:
+def deliver_is_rendering() -> dict[str, Any]:
     return deliver_is_rendering_impl()
 
 
@@ -1560,7 +1551,7 @@ def deliver_is_rendering() -> dict:
     )
 )
 @mcp_error_handler
-def deliver_format_list() -> dict:
+def deliver_format_list() -> dict[str, Any]:
     return deliver_format_list_impl()
 
 
@@ -1572,7 +1563,7 @@ def deliver_format_list() -> dict:
     )
 )
 @mcp_error_handler
-def deliver_codec_list(format_name: str) -> dict:
+def deliver_codec_list(format_name: str) -> dict[str, Any]:
     return deliver_codec_list_impl(format_name=format_name)
 
 
@@ -1585,7 +1576,7 @@ def deliver_codec_list(format_name: str) -> dict:
     )
 )
 @mcp_error_handler
-def deliver_preset_import(path: str, dry_run: bool = True) -> dict:
+def deliver_preset_import(path: str, dry_run: bool = True) -> dict[str, Any]:
     return deliver_preset_import_impl(path=path, dry_run=dry_run)
 
 
@@ -1598,9 +1589,7 @@ def deliver_preset_import(path: str, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def deliver_preset_export(
-    name: str, path: str, dry_run: bool = True
-) -> dict:
+def deliver_preset_export(name: str, path: str, dry_run: bool = True) -> dict[str, Any]:
     return deliver_preset_export_impl(name=name, path=path, dry_run=dry_run)
 
 
@@ -1615,7 +1604,7 @@ def deliver_preset_export(
     )
 )
 @mcp_error_handler
-def gallery_album_list() -> list[dict]:
+def gallery_album_list() -> list[dict[str, Any]]:
     return gallery_album_list_impl()
 
 
@@ -1627,7 +1616,7 @@ def gallery_album_list() -> list[dict]:
     )
 )
 @mcp_error_handler
-def gallery_album_current() -> dict:
+def gallery_album_current() -> dict[str, Any]:
     return gallery_album_current_impl()
 
 
@@ -1639,7 +1628,7 @@ def gallery_album_current() -> dict:
     )
 )
 @mcp_error_handler
-def gallery_album_set(name: str, dry_run: bool = True) -> dict:
+def gallery_album_set(name: str, dry_run: bool = True) -> dict[str, Any]:
     return gallery_album_set_impl(name=name, dry_run=dry_run)
 
 
@@ -1651,7 +1640,7 @@ def gallery_album_set(name: str, dry_run: bool = True) -> dict:
     )
 )
 @mcp_error_handler
-def gallery_album_create(dry_run: bool = True) -> dict:
+def gallery_album_create(dry_run: bool = True) -> dict[str, Any]:
     return gallery_album_create_impl(dry_run=dry_run)
 
 
@@ -1671,7 +1660,7 @@ def gallery_still_export(
     file_prefix: str = "still",
     format: str = "dpx",
     dry_run: bool = True,
-) -> dict:
+) -> dict[str, Any]:
     return gallery_still_export_impl(
         folder_path=folder_path,
         file_prefix=file_prefix,
@@ -1689,7 +1678,7 @@ def gallery_still_export(
     )
 )
 @mcp_error_handler
-def gallery_still_import(paths: list[str], dry_run: bool = True) -> dict:
+def gallery_still_import(paths: list[str], dry_run: bool = True) -> dict[str, Any]:
     return gallery_still_import_impl(paths=paths, dry_run=dry_run)
 
 
@@ -1704,10 +1693,8 @@ def gallery_still_import(paths: list[str], dry_run: bool = True) -> dict:
 @mcp_error_handler
 def gallery_still_delete(
     still_indices: list[int], dry_run: bool = True
-) -> dict:
-    return gallery_still_delete_impl(
-        still_indices=still_indices, dry_run=dry_run
-    )
+) -> dict[str, Any]:
+    return gallery_still_delete_impl(still_indices=still_indices, dry_run=dry_run)
 
 
 if __name__ == "__main__":

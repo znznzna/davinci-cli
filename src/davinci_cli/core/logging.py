@@ -24,7 +24,9 @@ _ROOT_LOGGER_NAME = "davinci_cli"
 
 # ログフォーマット
 _LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-_LOG_FORMAT_DEBUG = "%(asctime)s [%(levelname)s] %(name)s (%(filename)s:%(lineno)d): %(message)s"
+_LOG_FORMAT_DEBUG = (
+    "%(asctime)s [%(levelname)s] %(name)s (%(filename)s:%(lineno)d): %(message)s"
+)
 
 
 def setup_logging(verbose: bool = False, debug: bool = False) -> None:

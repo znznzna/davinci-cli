@@ -145,7 +145,8 @@ def _make_media_resolve() -> MagicMock:
     clip = MagicMock()
     clip.GetName.return_value = "clip1.mov"
     clip.GetMetadata.side_effect = lambda *args: (
-        args[0] if len(args) == 1 and isinstance(args[0], str)
+        args[0]
+        if len(args) == 1 and isinstance(args[0], str)
         else {"Description": "test", "Comments": "none"}
     )
     folder.GetClipList.return_value = [clip]
@@ -171,9 +172,7 @@ class TestE2ESystemPage:
         assert data["page"] == "color"
 
     def test_page_set_dry_run(self):
-        result = CliRunner().invoke(
-            dr, ["system", "page", "set", "edit", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["system", "page", "set", "edit", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -212,9 +211,7 @@ class TestE2ESystemKeyframeMode:
 
 class TestE2EProjectRename:
     def test_rename_dry_run(self):
-        result = CliRunner().invoke(
-            dr, ["project", "rename", "NewName", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["project", "rename", "NewName", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -523,9 +520,7 @@ class TestE2EColorOps:
         assert data["action"] == "copy_grade"
 
     def test_reset_all_dry_run(self):
-        result = CliRunner().invoke(
-            dr, ["color", "reset-all", "0", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["color", "reset-all", "0", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -593,9 +588,7 @@ class TestE2ENodeOps:
         )
         graph.GetLUT.return_value = "/path/to/lut.cube"
         with patch(COLOR_PATCH, return_value=resolve):
-            result = CliRunner().invoke(
-                dr, ["color", "node", "lut", "get", "0", "1"]
-            )
+            result = CliRunner().invoke(dr, ["color", "node", "lut", "get", "0", "1"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["lut_path"] == "/path/to/lut.cube"
@@ -628,9 +621,7 @@ class TestE2EDeliverExtended:
         assert data["job_id"] == "abc-123"
 
     def test_delete_all_jobs_dry_run(self):
-        result = CliRunner().invoke(
-            dr, ["deliver", "delete-all-jobs", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["deliver", "delete-all-jobs", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -721,9 +712,7 @@ class TestE2EGallery:
         assert data["action"] == "album_set"
 
     def test_album_create_dry_run(self):
-        result = CliRunner().invoke(
-            dr, ["gallery", "album", "create", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["gallery", "album", "create", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -787,9 +776,7 @@ class TestE2EMediaExtended:
         assert data["action"] == "media_move"
 
     def test_delete_dry_run(self):
-        result = CliRunner().invoke(
-            dr, ["media", "delete", "clip1.mov", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["media", "delete", "clip1.mov", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True

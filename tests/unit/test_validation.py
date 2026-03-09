@@ -3,7 +3,11 @@ from pathlib import Path
 import pytest
 
 from davinci_cli.core.exceptions import ValidationError
-from davinci_cli.core.validation import validate_path, validate_resource_id, validate_string
+from davinci_cli.core.validation import (
+    validate_path,
+    validate_resource_id,
+    validate_string,
+)
 
 # --- validate_path ---
 
@@ -48,13 +52,17 @@ class TestValidatePath:
 
     def test_allowed_extensions_pass(self):
         """許可された拡張子は通過する"""
-        result = validate_path("/path/to/lut.cube", allowed_extensions=[".cube", ".3dl", ".lut"])
+        result = validate_path(
+            "/path/to/lut.cube", allowed_extensions=[".cube", ".3dl", ".lut"]
+        )
         assert result.suffix == ".cube"
 
     def test_allowed_extensions_rejected(self):
         """許可されていない拡張子は拒絶する"""
         with pytest.raises(ValidationError, match="not allowed"):
-            validate_path("/path/to/malicious.exe", allowed_extensions=[".cube", ".3dl", ".lut"])
+            validate_path(
+                "/path/to/malicious.exe", allowed_extensions=[".cube", ".3dl", ".lut"]
+            )
 
     def test_allowed_extensions_case_insensitive(self):
         """拡張子チェックは大文字小文字を区別しない"""

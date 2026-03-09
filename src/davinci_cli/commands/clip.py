@@ -90,9 +90,9 @@ def _get_current_timeline() -> Any:
     return tl
 
 
-def _collect_clips(tl: Any) -> list[tuple[dict, Any]]:
+def _collect_clips(tl: Any) -> list[tuple[dict[str, Any], Any]]:
     """タイムラインから全クリップを収集する。"""
-    clips: list[tuple[dict, Any]] = []
+    clips: list[tuple[dict[str, Any], Any]] = []
     for track_type in ["video", "audio"]:
         track_count = tl.GetTrackCount(track_type)
         for track_idx in range(1, track_count + 1):
@@ -128,7 +128,7 @@ def _get_clip_item_by_index(tl: Any, index: int) -> Any:
 def clip_list_impl(
     timeline_name: str | None = None,
     fields: list[str] | None = None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     if timeline_name:
         resolve = get_resolve()
         pm = resolve.GetProjectManager()
@@ -157,7 +157,7 @@ def clip_list_impl(
     return result
 
 
-def clip_info_impl(index: int, fields: list[str] | None = None) -> dict:
+def clip_info_impl(index: int, fields: list[str] | None = None) -> dict[str, Any]:
     tl = _get_current_timeline()
     clips = _collect_clips(tl)
     if index < 0 or index >= len(clips):
@@ -171,7 +171,7 @@ def clip_info_impl(index: int, fields: list[str] | None = None) -> dict:
     return info
 
 
-def clip_select_impl(index: int) -> dict:
+def clip_select_impl(index: int) -> dict[str, Any]:
     tl = _get_current_timeline()
     clips = _collect_clips(tl)
     if index < 0 or index >= len(clips):
@@ -182,7 +182,7 @@ def clip_select_impl(index: int) -> dict:
     return {"selected": index, "name": clips[index][0]["name"]}
 
 
-def clip_property_get_impl(index: int, key: str) -> dict:
+def clip_property_get_impl(index: int, key: str) -> dict[str, Any]:
     tl = _get_current_timeline()
     clips = _collect_clips(tl)
     if index < 0 or index >= len(clips):
@@ -200,7 +200,7 @@ def clip_property_set_impl(
     key: str,
     value: str,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -226,7 +226,7 @@ def clip_property_set_impl(
     return {"set": True, "index": index, "key": key, "value": value}
 
 
-def clip_enable_impl(index: int, enabled: bool | None = None) -> dict:
+def clip_enable_impl(index: int, enabled: bool | None = None) -> dict[str, Any]:
     """Get/set clip enabled. enabled=None means get."""
     tl = _get_current_timeline()
     clip_item = _get_clip_item_by_index(tl, index)
@@ -238,7 +238,7 @@ def clip_enable_impl(index: int, enabled: bool | None = None) -> dict:
     return {"set": True, "enabled": enabled, "clip_index": index}
 
 
-def clip_color_set_impl(index: int, color: str) -> dict:
+def clip_color_set_impl(index: int, color: str) -> dict[str, Any]:
     tl = _get_current_timeline()
     clip_item = _get_clip_item_by_index(tl, index)
     result = clip_item.SetClipColor(color)
@@ -249,13 +249,13 @@ def clip_color_set_impl(index: int, color: str) -> dict:
     return {"set": True, "color": color, "clip_index": index}
 
 
-def clip_color_get_impl(index: int) -> dict:
+def clip_color_get_impl(index: int) -> dict[str, Any]:
     tl = _get_current_timeline()
     clip_item = _get_clip_item_by_index(tl, index)
     return {"color": clip_item.GetClipColor(), "clip_index": index}
 
 
-def clip_color_clear_impl(index: int) -> dict:
+def clip_color_clear_impl(index: int) -> dict[str, Any]:
     tl = _get_current_timeline()
     clip_item = _get_clip_item_by_index(tl, index)
     result = clip_item.ClearClipColor()
@@ -264,31 +264,27 @@ def clip_color_clear_impl(index: int) -> dict:
     return {"cleared": True, "clip_index": index}
 
 
-def clip_flag_add_impl(index: int, color: str) -> dict:
+def clip_flag_add_impl(index: int, color: str) -> dict[str, Any]:
     tl = _get_current_timeline()
     clip_item = _get_clip_item_by_index(tl, index)
     result = clip_item.AddFlag(color)
     if result is False:
-        raise ValidationError(
-            field="color", reason=f"Failed to add flag: {color}"
-        )
+        raise ValidationError(field="color", reason=f"Failed to add flag: {color}")
     return {"added": True, "color": color, "clip_index": index}
 
 
-def clip_flag_list_impl(index: int) -> list:
+def clip_flag_list_impl(index: int) -> list[Any]:
     tl = _get_current_timeline()
     clip_item = _get_clip_item_by_index(tl, index)
     return clip_item.GetFlagList() or []
 
 
-def clip_flag_clear_impl(index: int, color: str = "All") -> dict:
+def clip_flag_clear_impl(index: int, color: str = "All") -> dict[str, Any]:
     tl = _get_current_timeline()
     clip_item = _get_clip_item_by_index(tl, index)
     result = clip_item.ClearFlags(color)
     if result is False:
-        raise ValidationError(
-            field="color", reason=f"Failed to clear flags: {color}"
-        )
+        raise ValidationError(field="color", reason=f"Failed to clear flags: {color}")
     return {"cleared": True, "color": color, "clip_index": index}
 
 
@@ -301,9 +297,7 @@ def clip() -> None:
 
 
 @clip.command(name="list")
-@click.option(
-    "--timeline", default=None, help="Timeline name (default: current)"
-)
+@click.option("--timeline", default=None, help="Timeline name (default: current)")
 @fields_option
 @click.pass_context
 def clip_list(
@@ -320,9 +314,7 @@ def clip_list(
 @click.argument("index", type=int)
 @fields_option
 @click.pass_context
-def clip_info(
-    ctx: click.Context, index: int, fields: list[str] | None
-) -> None:
+def clip_info(ctx: click.Context, index: int, fields: list[str] | None) -> None:
     """クリップ詳細。"""
     result = clip_info_impl(index=index, fields=fields)
     output(result, pretty=ctx.obj.get("pretty"))
@@ -366,15 +358,15 @@ def property_set(
     dry_run: bool,
 ) -> None:
     """プロパティ設定。"""
-    result = clip_property_set_impl(
-        index=index, key=key, value=value, dry_run=dry_run
-    )
+    result = clip_property_set_impl(index=index, key=key, value=value, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
 
 
 @clip.command(name="enable")
 @click.argument("index", type=int)
-@click.option("--value", type=bool, default=None, help="Set enabled state (omit to get)")
+@click.option(
+    "--value", type=bool, default=None, help="Set enabled state (omit to get)"
+)
 @click.pass_context
 def clip_enable(ctx: click.Context, index: int, value: bool | None) -> None:
     """クリップ有効/無効の取得・設定。"""

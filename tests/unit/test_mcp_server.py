@@ -308,9 +308,9 @@ class TestMCPParityTools:
         for name in dry_run_tools:
             tool = next(t for t in tools if t.name == name)
             sig = inspect.signature(tool.fn)
-            assert sig.parameters["dry_run"].default is True, (
-                f"{name} dry_run default is not True"
-            )
+            assert (
+                sig.parameters["dry_run"].default is True
+            ), f"{name} dry_run default is not True"
 
 
 class TestMCPDryRunDefaults:
@@ -378,9 +378,9 @@ class TestMCPDryRunDefaults:
         for name in dry_run_tools:
             fn = self._get_tool_fn(name)
             sig = inspect.signature(fn)
-            assert sig.parameters["dry_run"].default is True, (
-                f"{name} dry_run default is not True"
-            )
+            assert (
+                sig.parameters["dry_run"].default is True
+            ), f"{name} dry_run default is not True"
 
 
 class TestMCPDescriptions:
@@ -394,43 +394,62 @@ class TestMCPDescriptions:
         tools = _list_tools()
         for tool in tools:
             desc = tool.description or ""
-            assert "[risk_level:" in desc, (
-                f"{tool.name} missing [risk_level:] in description"
-            )
+            assert (
+                "[risk_level:" in desc
+            ), f"{tool.name} missing [risk_level:] in description"
 
     def test_all_tools_have_mutating_tag(self):
         """全ツールが [mutating: ...] タグを含むことを確認する。"""
         tools = _list_tools()
         for tool in tools:
             desc = tool.description or ""
-            assert "[mutating:" in desc, (
-                f"{tool.name} missing [mutating:] in description"
-            )
+            assert (
+                "[mutating:" in desc
+            ), f"{tool.name} missing [mutating:] in description"
 
     def test_read_tools_not_mutating(self):
         """読み取り専用ツールが mutating: false であることを確認する。"""
         read_tools = [
-            "system_ping", "system_version", "system_edition", "system_info",
-            "system_page_get", "system_keyframe_mode_get",
-            "project_list", "project_info", "project_settings_get",
-            "timeline_list", "timeline_current", "timeline_timecode_get",
-            "timeline_current_item", "timeline_track_list",
+            "system_ping",
+            "system_version",
+            "system_edition",
+            "system_info",
+            "system_page_get",
+            "system_keyframe_mode_get",
+            "project_list",
+            "project_info",
+            "project_settings_get",
+            "timeline_list",
+            "timeline_current",
+            "timeline_timecode_get",
+            "timeline_current_item",
+            "timeline_track_list",
             "timeline_marker_list",
-            "clip_list", "clip_info", "clip_property_get",
-            "clip_color_get", "clip_flag_list",
-            "color_version_list", "color_version_current",
-            "color_node_lut_get", "color_still_list",
-            "media_list", "media_metadata_get", "media_folder_list",
-            "deliver_preset_list", "deliver_list_jobs", "deliver_status",
-            "deliver_job_status", "deliver_is_rendering",
-            "deliver_format_list", "deliver_codec_list",
-            "gallery_album_list", "gallery_album_current",
+            "clip_list",
+            "clip_info",
+            "clip_property_get",
+            "clip_color_get",
+            "clip_flag_list",
+            "color_version_list",
+            "color_version_current",
+            "color_node_lut_get",
+            "color_still_list",
+            "media_list",
+            "media_metadata_get",
+            "media_folder_list",
+            "deliver_preset_list",
+            "deliver_list_jobs",
+            "deliver_status",
+            "deliver_job_status",
+            "deliver_is_rendering",
+            "deliver_format_list",
+            "deliver_codec_list",
+            "gallery_album_list",
+            "gallery_album_current",
         ]
         for name in read_tools:
             desc = self._get_tool_desc(name)
-            assert "[mutating: false]" in desc, (
-                f"{name} should be [mutating: false]"
-            )
+            assert "[mutating: false]" in desc, f"{name} should be [mutating: false]"
 
     def test_destroy_tools_have_destroy_risk(self):
         """破壊的ツールが risk_level: destroy であることを確認する。"""
@@ -446,9 +465,9 @@ class TestMCPDescriptions:
         ]
         for name in destroy_tools:
             desc = self._get_tool_desc(name)
-            assert "[risk_level: destroy]" in desc, (
-                f"{name} should be [risk_level: destroy]"
-            )
+            assert (
+                "[risk_level: destroy]" in desc
+            ), f"{name} should be [risk_level: destroy]"
 
     def test_dry_run_tools_have_supports_dry_run_tag(self):
         """dry_run パラメータを持つツールが supports_dry_run タグを含むことを確認する。"""
@@ -457,21 +476,22 @@ class TestMCPDescriptions:
             sig = inspect.signature(tool.fn)
             if "dry_run" in sig.parameters:
                 desc = tool.description or ""
-                assert "[supports_dry_run: true]" in desc, (
-                    f"{tool.name} has dry_run param but missing [supports_dry_run: true]"
-                )
+                assert (
+                    "[supports_dry_run: true]" in desc
+                ), f"{tool.name} has dry_run param but missing [supports_dry_run: true]"
 
     def test_descriptions_are_english(self):
         """全 description が英語であることを確認する（日本語文字を含まない）。"""
         import re
+
         tools = _list_tools()
-        japanese_pattern = re.compile(r'[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]')
+        japanese_pattern = re.compile(r"[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]")
         for tool in tools:
             desc = tool.description or ""
             match = japanese_pattern.search(desc)
-            assert match is None, (
-                f"{tool.name} contains Japanese characters in description: '{match.group()}'"
-            )
+            assert (
+                match is None
+            ), f"{tool.name} contains Japanese characters in description: '{match.group()}'"
 
     def test_deliver_start_description(self):
         desc = self._get_tool_desc("deliver_start")

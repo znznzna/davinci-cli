@@ -1,4 +1,3 @@
-
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -119,15 +118,18 @@ class TestMediaExtendedImpl:
         # Add a target subfolder to root
         target = MagicMock()
         target.GetName.return_value = "VFX"
-        root = mock_resolve.GetProjectManager().GetCurrentProject().GetMediaPool().GetRootFolder()
+        root = (
+            mock_resolve.GetProjectManager()
+            .GetCurrentProject()
+            .GetMediaPool()
+            .GetRootFolder()
+        )
         root.GetSubFolderList.return_value = [target]
         media_pool = mock_resolve.GetProjectManager().GetCurrentProject().GetMediaPool()
         media_pool.MoveClips.return_value = True
 
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            result = media_move_impl(
-                clip_names=["clip1.mov"], target_folder="VFX"
-            )
+            result = media_move_impl(clip_names=["clip1.mov"], target_folder="VFX")
         assert result["moved_count"] == 1
         media_pool.MoveClips.assert_called_once()
 
@@ -172,9 +174,7 @@ class TestMediaExtendedImpl:
 
     def test_media_relink_path_traversal(self):
         with pytest.raises(ValidationError, match="path traversal"):
-            media_relink_impl(
-                clip_names=["clip1.mov"], folder_path="../../../etc"
-            )
+            media_relink_impl(clip_names=["clip1.mov"], folder_path="../../../etc")
 
     def test_media_unlink(self, mock_resolve):
         media_pool = mock_resolve.GetProjectManager().GetCurrentProject().GetMediaPool()
@@ -253,11 +253,7 @@ class TestMediaMetadataImpl:
         assert result["action"] == "media_export_metadata"
 
     def test_export_metadata(self, mock_resolve):
-        media_pool = (
-            mock_resolve.GetProjectManager()
-            .GetCurrentProject()
-            .GetMediaPool()
-        )
+        media_pool = mock_resolve.GetProjectManager().GetCurrentProject().GetMediaPool()
         media_pool.ExportMetadata.return_value = True
 
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
@@ -346,9 +342,7 @@ class TestMediaReturnValueChecks:
 class TestMediaCLI:
     def test_media_list(self, mock_resolve):
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            result = CliRunner().invoke(
-                dr, ["media", "list", "--fields", "clip_name"]
-            )
+            result = CliRunner().invoke(dr, ["media", "list", "--fields", "clip_name"])
         assert result.exit_code == 0
 
     def test_media_folder_delete_dry_run(self):

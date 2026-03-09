@@ -15,7 +15,11 @@ from davinci_cli.commands.project import (
     project_rename_impl,
     project_settings_set_impl,
 )
-from davinci_cli.core.exceptions import ProjectNotFoundError, ProjectNotOpenError, ValidationError
+from davinci_cli.core.exceptions import (
+    ProjectNotFoundError,
+    ProjectNotOpenError,
+    ValidationError,
+)
 
 RESOLVE_PATCH = "davinci_cli.commands.project.get_resolve"
 
@@ -150,9 +154,7 @@ class TestProjectRenameImpl:
         assert result == {"dry_run": True, "action": "rename", "name": "NewName"}
 
     def test_rename_success(self, mock_resolve):
-        mock_resolve.GetProjectManager().GetCurrentProject().SetName.return_value = (
-            True
-        )
+        mock_resolve.GetProjectManager().GetCurrentProject().SetName.return_value = True
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = project_rename_impl("NewName")
         assert result == {"renamed": True, "name": "NewName"}
@@ -171,9 +173,7 @@ class TestProjectRenameImpl:
             project_rename_impl("NewName")
 
     def test_rename_cli_dry_run(self):
-        result = CliRunner().invoke(
-            dr, ["project", "rename", "NewName", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["project", "rename", "NewName", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -188,9 +188,7 @@ class TestProjectCLI:
         assert result.exit_code == 0
 
     def test_project_open_dry_run(self):
-        result = CliRunner().invoke(
-            dr, ["project", "open", "Test", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["project", "open", "Test", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -248,7 +246,5 @@ class TestProjectCLI:
 
     def test_project_info_with_fields(self, mock_resolve):
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            result = CliRunner().invoke(
-                dr, ["project", "info", "--fields", "name"]
-            )
+            result = CliRunner().invoke(dr, ["project", "info", "--fields", "name"])
         assert result.exit_code == 0

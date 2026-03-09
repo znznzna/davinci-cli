@@ -68,9 +68,7 @@ class TestColorApplyLutImpl:
     def test_dry_run(self, tmp_path):
         lut = tmp_path / "test.cube"
         lut.touch()
-        result = color_apply_lut_impl(
-            clip_index=0, lut_path=str(lut), dry_run=True
-        )
+        result = color_apply_lut_impl(clip_index=0, lut_path=str(lut), dry_run=True)
         assert result["dry_run"] is True
         assert result["action"] == "apply_lut"
 
@@ -82,9 +80,7 @@ class TestColorApplyLutImpl:
         lut = tmp_path / "rec709.cube"
         lut.touch()
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            result = color_apply_lut_impl(
-                clip_index=0, lut_path=str(lut)
-            )
+            result = color_apply_lut_impl(clip_index=0, lut_path=str(lut))
         assert "applied" in result
 
 
@@ -133,14 +129,12 @@ class TestColorGradeImpl:
         assert data["action"] == "copy_grade"
 
 
-
 class TestNodeImpl:
     def test_node_list(self, mock_resolve):
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = node_list_impl(clip_index=0)
         assert isinstance(result, list)
         assert len(result) == 3
-
 
 
 class TestStillImpl:
@@ -227,8 +221,9 @@ class TestColorVersionImpl:
         tl = pm.GetCurrentProject().GetCurrentTimeline()
         tl.GetItemListInTrack.return_value = [clip]
 
-        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
-            ValidationError, match="Failed to add version"
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="Failed to add version"),
         ):
             color_version_add_impl(clip_index=0, name="V2", version_type=0)
 
@@ -270,8 +265,9 @@ class TestColorVersionMutateImpl:
         tl = pm.GetCurrentProject().GetCurrentTimeline()
         tl.GetItemListInTrack.return_value = [clip]
 
-        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
-            ValidationError, match="Failed to load version"
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="Failed to load version"),
         ):
             color_version_load_impl(clip_index=0, name="V1", version_type=0)
 
@@ -311,8 +307,9 @@ class TestColorVersionMutateImpl:
         tl = pm.GetCurrentProject().GetCurrentTimeline()
         tl.GetItemListInTrack.return_value = [clip]
 
-        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
-            ValidationError, match="Failed to delete version"
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="Failed to delete version"),
         ):
             color_version_delete_impl(clip_index=0, name="V1", version_type=0)
 
@@ -356,8 +353,9 @@ class TestColorVersionMutateImpl:
         tl = pm.GetCurrentProject().GetCurrentTimeline()
         tl.GetItemListInTrack.return_value = [clip]
 
-        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
-            ValidationError, match="Failed to rename version"
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="Failed to rename version"),
         ):
             color_version_rename_impl(
                 clip_index=0, old_name="V1", new_name="V2", version_type=0
@@ -395,9 +393,7 @@ class TestGraphOperationsImpl:
         lut = tmp_path / "rec709.cube"
         lut.touch()
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            result = node_lut_set_impl(
-                clip_index=0, node_index=1, lut_path=str(lut)
-            )
+            result = node_lut_set_impl(clip_index=0, node_index=1, lut_path=str(lut))
         graph.SetLUT.assert_called_once_with(1, str(lut))
         assert result["set"] is True
         assert result["node_index"] == 1
@@ -471,13 +467,15 @@ class TestColorExtendedImpl:
                 power="0.6 0.7 0.8",
                 saturation="0.65",
             )
-        clip.SetCDL.assert_called_once_with({
-            "NodeIndex": "1",
-            "Slope": "0.5 0.4 0.2",
-            "Offset": "0.4 0.3 0.2",
-            "Power": "0.6 0.7 0.8",
-            "Saturation": "0.65",
-        })
+        clip.SetCDL.assert_called_once_with(
+            {
+                "NodeIndex": "1",
+                "Slope": "0.5 0.4 0.2",
+                "Offset": "0.4 0.3 0.2",
+                "Power": "0.6 0.7 0.8",
+                "Saturation": "0.65",
+            }
+        )
         assert result["set"] is True
         assert result["clip_index"] == 0
         assert result["node_index"] == 1

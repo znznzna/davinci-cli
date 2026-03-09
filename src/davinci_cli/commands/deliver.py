@@ -4,6 +4,7 @@ deliver start は --dry-run による事前確認を推奨する。
 _impl 関数の dry_run デフォルトは False（他コマンドと一貫性を保つ）。
 MCP 側では dry_run=True がデフォルト（破壊的操作の安全性確保）。
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -52,7 +53,7 @@ class DeliverAddJobOutput(BaseModel):
     output_dir: str | None = None
     dry_run: bool | None = None
     action: str | None = None
-    job: dict | None = None
+    job: dict[str, Any] | None = None
 
 
 class DeliverStartInput(BaseModel):
@@ -62,14 +63,14 @@ class DeliverStartInput(BaseModel):
 class DeliverStartOutput(BaseModel):
     would_render: bool | None = None
     rendering_started: bool | None = None
-    jobs: list[dict] | None = None
+    jobs: list[dict[str, Any]] | None = None
     job_count: int | None = None
     estimated_seconds: int | None = None
     failed_ids: list[str] | None = None
 
 
 class DeliverStatusOutput(BaseModel):
-    jobs: list[dict]
+    jobs: list[dict[str, Any]]
 
 
 class DeliverStopOutput(BaseModel):
@@ -162,23 +163,23 @@ def _get_current_project() -> Any:
 # --- _impl Functions ---
 
 
-def deliver_preset_list_impl() -> list[dict]:
+def deliver_preset_list_impl() -> list[dict[str, Any]]:
     project = _get_current_project()
     presets = project.GetRenderPresetList() or []
     return [{"name": p} for p in presets]
 
 
-def deliver_preset_load_impl(name: str) -> dict:
+def deliver_preset_load_impl(name: str) -> dict[str, Any]:
     project = _get_current_project()
     success = project.LoadRenderPreset(name)
     if not success:
-        raise ValidationError(
-            field="preset", reason=f"Preset not found: {name}"
-        )
+        raise ValidationError(field="preset", reason=f"Preset not found: {name}")
     return {"loaded": name}
 
 
-def deliver_add_job_impl(job_data: dict, dry_run: bool = False) -> dict:
+def deliver_add_job_impl(
+    job_data: dict[str, Any], dry_run: bool = False
+) -> dict[str, Any]:
     validated = RenderJobInput.model_validate(job_data)
     if dry_run:
         return {
@@ -208,11 +209,13 @@ def deliver_add_job_impl(job_data: dict, dry_run: bool = False) -> dict:
                 field="timeline_name",
                 reason=f"Timeline not found: {validated.timeline_name}",
             )
-    project.SetRenderSettings({
-        "SelectAllFrames": True,
-        "TargetDir": validated.output_dir,
-        "CustomName": validated.filename,
-    })
+    project.SetRenderSettings(
+        {
+            "SelectAllFrames": True,
+            "TargetDir": validated.output_dir,
+            "CustomName": validated.filename,
+        }
+    )
     job_id = project.AddRenderJob()
     if not job_id:
         raise ValidationError(
@@ -222,10 +225,10 @@ def deliver_add_job_impl(job_data: dict, dry_run: bool = False) -> dict:
     return {"job_id": job_id, "output_dir": validated.output_dir}
 
 
-def deliver_list_jobs_impl(fields: list[str] | None = None) -> list[dict]:
+def deliver_list_jobs_impl(fields: list[str] | None = None) -> list[dict[str, Any]]:
     project = _get_current_project()
     jobs = project.GetRenderJobList() or []
-    result: list[dict] = []
+    result: list[dict[str, Any]] = []
     for job in jobs:
         job_id = job.get("JobId", "")
         status_info = project.GetRenderJobStatus(job_id) or {} if job_id else {}
@@ -244,7 +247,7 @@ def deliver_list_jobs_impl(fields: list[str] | None = None) -> list[dict]:
 def deliver_start_impl(
     job_ids: list[str] | None = None,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     jobs = deliver_list_jobs_impl()
     if job_ids:
         jobs = [j for j in jobs if j["job_id"] in job_ids]
@@ -273,7 +276,7 @@ def deliver_start_impl(
                 field="job_ids",
                 reason=f"StartRendering failed for all jobs: {failed_ids}",
             )
-        result = {
+        result: dict[str, Any] = {
             "rendering_started": True,
             "job_count": len(validated_ids) - len(failed_ids),
         }
@@ -295,31 +298,33 @@ def deliver_start_impl(
         return {"rendering_started": True, "job_count": len(jobs)}
 
 
-def deliver_stop_impl() -> dict:
+def deliver_stop_impl() -> dict[str, Any]:
     project = _get_current_project()
     project.StopRendering()
     return {"stopped": True}
 
 
-def deliver_status_impl() -> dict:
+def deliver_status_impl() -> dict[str, Any]:
     project = _get_current_project()
     jobs = project.GetRenderJobList() or []
-    statuses: list[dict] = []
+    statuses: list[dict[str, Any]] = []
     for job in jobs:
         job_id = job.get("JobId")
         if not job_id:
             continue
         status_info = project.GetRenderJobStatus(job_id) or {}
-        statuses.append({
-            "job_id": job_id,
-            "status": status_info.get("JobStatus"),
-            "percent": status_info.get("CompletionPercentage", 0),
-            "eta": (status_info.get("EstimatedTimeRemainingInMs", 0) or 0) // 1000,
-        })
+        statuses.append(
+            {
+                "job_id": job_id,
+                "status": status_info.get("JobStatus"),
+                "percent": status_info.get("CompletionPercentage", 0),
+                "eta": (status_info.get("EstimatedTimeRemainingInMs", 0) or 0) // 1000,
+            }
+        )
     return {"jobs": statuses}
 
 
-def deliver_delete_job_impl(job_id: str, dry_run: bool = False) -> dict:
+def deliver_delete_job_impl(job_id: str, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "delete_job", "job_id": job_id}
     project = _get_current_project()
@@ -331,25 +336,21 @@ def deliver_delete_job_impl(job_id: str, dry_run: bool = False) -> dict:
     return {"deleted": True, "job_id": job_id}
 
 
-def deliver_delete_all_jobs_impl(dry_run: bool = False) -> dict:
+def deliver_delete_all_jobs_impl(dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "delete_all_jobs"}
     project = _get_current_project()
     result = project.DeleteAllRenderJobs()
     if result is False:
-        raise ValidationError(
-            field="jobs", reason="Failed to delete all render jobs"
-        )
+        raise ValidationError(field="jobs", reason="Failed to delete all render jobs")
     return {"deleted_all": True}
 
 
-def deliver_job_status_impl(job_id: str) -> dict:
+def deliver_job_status_impl(job_id: str) -> dict[str, Any]:
     project = _get_current_project()
     raw = project.GetRenderJobStatus(job_id)
     if not raw:
-        raise ValidationError(
-            field="job_id", reason=f"No status for job: {job_id}"
-        )
+        raise ValidationError(field="job_id", reason=f"No status for job: {job_id}")
     return {
         "job_id": job_id,
         "status": raw.get("JobStatus"),
@@ -358,19 +359,19 @@ def deliver_job_status_impl(job_id: str) -> dict:
     }
 
 
-def deliver_is_rendering_impl() -> dict:
+def deliver_is_rendering_impl() -> dict[str, Any]:
     project = _get_current_project()
     return {"rendering": project.IsRenderingInProgress()}
 
 
-def deliver_format_list_impl() -> dict:
+def deliver_format_list_impl() -> dict[str, Any]:
     """レンダーフォーマット一覧を返す。"""
     project = _get_current_project()
     formats = project.GetRenderFormats()
     return {"formats": formats or {}}
 
 
-def deliver_codec_list_impl(format_name: str) -> dict:
+def deliver_codec_list_impl(format_name: str) -> dict[str, Any]:
     """指定フォーマットのコーデック一覧を返す。
 
     format_name は表示名（"QuickTime"）または拡張子（".mov"）を受け付ける。
@@ -406,7 +407,7 @@ def deliver_codec_list_impl(format_name: str) -> dict:
     return {"format": format_name, "codecs": {}}
 
 
-def deliver_preset_import_impl(path: str, dry_run: bool = False) -> dict:
+def deliver_preset_import_impl(path: str, dry_run: bool = False) -> dict[str, Any]:
     """レンダープリセットをインポートする。"""
     validated = validate_path(path)
     if not validated.exists():
@@ -416,15 +417,13 @@ def deliver_preset_import_impl(path: str, dry_run: bool = False) -> dict:
     resolve = get_resolve()
     result = resolve.ImportRenderPreset(str(validated))
     if result is False:
-        raise ValidationError(
-            field="path", reason=f"Failed to import preset: {path}"
-        )
+        raise ValidationError(field="path", reason=f"Failed to import preset: {path}")
     return {"imported": True, "path": str(validated)}
 
 
 def deliver_preset_export_impl(
     name: str, path: str, dry_run: bool = False
-) -> dict:
+) -> dict[str, Any]:
     """レンダープリセットをエクスポートする。"""
     validated = validate_path(path)
     if dry_run:
@@ -437,9 +436,7 @@ def deliver_preset_export_impl(
     resolve = get_resolve()
     result = resolve.ExportRenderPreset(name, str(validated))
     if result is False:
-        raise ValidationError(
-            field="name", reason=f"Failed to export preset: {name}"
-        )
+        raise ValidationError(field="name", reason=f"Failed to export preset: {name}")
     return {"exported": True, "name": name, "path": str(validated)}
 
 
@@ -478,7 +475,7 @@ def preset_load(ctx: click.Context, name: str) -> None:
 @dry_run_option
 @click.pass_context
 def add_job(
-    ctx: click.Context, json_input: dict | None, dry_run: bool
+    ctx: click.Context, json_input: dict[str, Any] | None, dry_run: bool
 ) -> None:
     """レンダージョブ追加。"""
     if not json_input:

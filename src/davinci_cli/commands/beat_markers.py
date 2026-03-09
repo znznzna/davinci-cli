@@ -18,10 +18,10 @@ from davinci_cli.output.formatter import output
 
 # 音価 → 1拍あたりの倍率マッピング
 NOTE_VALUE_MAP: dict[str, float] = {
-    "1/1": 4.0,    # 全音符 = 4拍
-    "1/2": 2.0,    # 2分音符 = 2拍
-    "1/4": 1.0,    # 4分音符 = 1拍
-    "1/8": 0.5,    # 8分音符 = 0.5拍
+    "1/1": 4.0,  # 全音符 = 4拍
+    "1/2": 2.0,  # 2分音符 = 2拍
+    "1/4": 1.0,  # 4分音符 = 1拍
+    "1/8": 0.5,  # 8分音符 = 0.5拍
     "1/16": 0.25,  # 16分音符 = 0.25拍
 }
 
@@ -93,9 +93,9 @@ def _get_current_project() -> Any:
     return project
 
 
-def _collect_clips(tl: Any) -> list[tuple[dict, Any]]:
+def _collect_clips(tl: Any) -> list[tuple[dict[str, Any], Any]]:
     """タイムラインから全クリップを収集する。"""
-    clips: list[tuple[dict, Any]] = []
+    clips: list[tuple[dict[str, Any], Any]] = []
     for track_type in ["video", "audio"]:
         track_count = tl.GetTrackCount(track_type)
         for track_idx in range(1, track_count + 1):
@@ -124,7 +124,7 @@ def beat_marker_impl(
     name: str = "",
     duration: int = 1,
     dry_run: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     """BPM と音価を指定して、指定クリップの範囲にマーカーを配置する。"""
     # 1. バリデーション
     if note_value not in NOTE_VALUE_MAP:
@@ -210,7 +210,7 @@ def beat_marker_impl(
 @click.pass_context
 def beat_marker_cmd(
     ctx: click.Context,
-    json_input: dict | None,
+    json_input: dict[str, Any] | None,
     dry_run: bool,
 ) -> None:
     """BPMベースのマーカー自動配置。"""

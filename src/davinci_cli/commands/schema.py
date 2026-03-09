@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import click
 
 from davinci_cli.core.exceptions import SchemaNotFoundError
@@ -13,14 +15,14 @@ from davinci_cli.output.formatter import output
 from davinci_cli.schema_registry import SCHEMA_REGISTRY
 
 
-def schema_show_impl(command_path: str) -> dict:
+def schema_show_impl(command_path: str) -> dict[str, Any]:
     """指定コマンドの JSON Schema を返す。"""
     if command_path not in SCHEMA_REGISTRY:
         available = sorted(SCHEMA_REGISTRY.keys())
         raise SchemaNotFoundError(command=command_path, available=available)
 
     input_model, output_model = SCHEMA_REGISTRY[command_path]
-    result: dict = {
+    result: dict[str, Any] = {
         "command": command_path,
         "output_schema": output_model.model_json_schema(),
     }
@@ -29,7 +31,7 @@ def schema_show_impl(command_path: str) -> dict:
     return result
 
 
-def schema_list_impl() -> list[dict]:
+def schema_list_impl() -> list[dict[str, Any]]:
     """登録済み全コマンドのスキーマ一覧を返す。"""
     return [{"command": k} for k in sorted(SCHEMA_REGISTRY.keys())]
 

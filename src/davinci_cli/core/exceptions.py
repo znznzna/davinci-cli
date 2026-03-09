@@ -35,7 +35,9 @@ class ResolveNotRunningError(DavinciCLIError):
     exit_code = 1
 
     def __init__(self) -> None:
-        super().__init__("DaVinci Resolve is not running. Please launch DaVinci Resolve first.")
+        super().__init__(
+            "DaVinci Resolve is not running. Please launch DaVinci Resolve first."
+        )
 
 
 class ProjectNotOpenError(DavinciCLIError):

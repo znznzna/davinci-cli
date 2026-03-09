@@ -123,17 +123,17 @@ def _get_current_project() -> Any:
 # --- _impl Functions ---
 
 
-def project_list_impl(fields: list[str] | None = None) -> list[dict]:
+def project_list_impl(fields: list[str] | None = None) -> list[dict[str, Any]]:
     resolve = get_resolve()
     pm = resolve.GetProjectManager()
     names = pm.GetProjectListInCurrentFolder()
-    projects: list[dict] = [{"name": n} for n in names]
+    projects: list[dict[str, Any]] = [{"name": n} for n in names]
     if fields:
         projects = [{k: p[k] for k in fields if k in p} for p in projects]
     return projects
 
 
-def project_open_impl(name: str, dry_run: bool = False) -> dict:
+def project_open_impl(name: str, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "open", "name": name}
     resolve = get_resolve()
@@ -144,7 +144,7 @@ def project_open_impl(name: str, dry_run: bool = False) -> dict:
     return {"opened": name}
 
 
-def project_close_impl(dry_run: bool = False) -> dict:
+def project_close_impl(dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "close"}
     resolve = get_resolve()
@@ -161,7 +161,7 @@ def project_close_impl(dry_run: bool = False) -> dict:
     return {"closed": True}
 
 
-def project_create_impl(name: str, dry_run: bool = False) -> dict:
+def project_create_impl(name: str, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "create", "name": name}
     resolve = get_resolve()
@@ -172,7 +172,7 @@ def project_create_impl(name: str, dry_run: bool = False) -> dict:
     return {"created": name}
 
 
-def project_delete_impl(name: str, dry_run: bool = False) -> dict:
+def project_delete_impl(name: str, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "delete", "name": name}
     resolve = get_resolve()
@@ -183,7 +183,7 @@ def project_delete_impl(name: str, dry_run: bool = False) -> dict:
     return {"deleted": name}
 
 
-def project_rename_impl(name: str, dry_run: bool = False) -> dict:
+def project_rename_impl(name: str, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "rename", "name": name}
     project = _get_current_project()
@@ -195,7 +195,7 @@ def project_rename_impl(name: str, dry_run: bool = False) -> dict:
     return {"renamed": True, "name": name}
 
 
-def project_save_impl() -> dict:
+def project_save_impl() -> dict[str, Any]:
     resolve = get_resolve()
     pm = resolve.GetProjectManager()
     if not pm.SaveProject():
@@ -203,7 +203,7 @@ def project_save_impl() -> dict:
     return {"saved": True}
 
 
-def project_info_impl(fields: list[str] | None = None) -> dict:
+def project_info_impl(fields: list[str] | None = None) -> dict[str, Any]:
     project = _get_current_project()
     info = {
         "name": project.GetName(),
@@ -215,7 +215,7 @@ def project_info_impl(fields: list[str] | None = None) -> dict:
     return info
 
 
-def project_settings_get_impl(key: str | None = None) -> dict:
+def project_settings_get_impl(key: str | None = None) -> dict[str, Any]:
     project = _get_current_project()
     if key:
         value = project.GetSetting(key)
@@ -225,7 +225,7 @@ def project_settings_get_impl(key: str | None = None) -> dict:
 
 def project_settings_set_impl(
     key: str, value: str, dry_run: bool = False
-) -> dict:
+) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -269,7 +269,7 @@ def project_list(ctx: click.Context, fields: list[str] | None) -> None:
 def project_open(
     ctx: click.Context,
     name: str | None,
-    json_input: dict | None,
+    json_input: dict[str, Any] | None,
     dry_run: bool,
 ) -> None:
     """プロジェクトを開く。"""
@@ -299,7 +299,7 @@ def project_close(ctx: click.Context, dry_run: bool) -> None:
 def project_create_cmd(
     ctx: click.Context,
     name: str | None,
-    json_input: dict | None,
+    json_input: dict[str, Any] | None,
     dry_run: bool,
 ) -> None:
     """新規プロジェクト作成。"""
@@ -320,7 +320,7 @@ def project_create_cmd(
 def project_delete_cmd(
     ctx: click.Context,
     name: str | None,
-    json_input: dict | None,
+    json_input: dict[str, Any] | None,
     dry_run: bool,
 ) -> None:
     """プロジェクト削除（破壊的操作）。"""
@@ -341,7 +341,7 @@ def project_delete_cmd(
 def project_rename(
     ctx: click.Context,
     name: str | None,
-    json_input: dict | None,
+    json_input: dict[str, Any] | None,
     dry_run: bool,
 ) -> None:
     """プロジェクト名を変更する。"""
@@ -390,9 +390,7 @@ def settings_get(ctx: click.Context, key: str | None) -> None:
 @click.argument("value")
 @dry_run_option
 @click.pass_context
-def settings_set(
-    ctx: click.Context, key: str, value: str, dry_run: bool
-) -> None:
+def settings_set(ctx: click.Context, key: str, value: str, dry_run: bool) -> None:
     """設定値変更。"""
     result = project_settings_set_impl(key=key, value=value, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))

@@ -117,15 +117,17 @@ class TestGalleryAlbumSetImpl:
         assert result == {"set": True, "name": "Album 2"}
 
     def test_album_set_not_found(self, mock_resolve):
-        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
-            ValidationError, match="Album not found"
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="Album not found"),
         ):
             gallery_album_set_impl(name="Nonexistent")
 
     def test_album_set_failure(self, mock_resolve):
         mock_resolve._gallery.SetCurrentStillAlbum.return_value = False
-        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
-            ValidationError, match="Failed to set album"
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="Failed to set album"),
         ):
             gallery_album_set_impl(name="Album 1")
 
@@ -143,8 +145,9 @@ class TestGalleryAlbumCreateImpl:
 
     def test_album_create_failure(self, mock_resolve):
         mock_resolve._gallery.CreateGalleryStillAlbum.return_value = None
-        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
-            ValidationError, match="Failed to create album"
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="Failed to create album"),
         ):
             gallery_album_create_impl()
 
@@ -173,8 +176,9 @@ class TestGalleryStillExportImpl:
 
     def test_still_export_failure(self, mock_resolve):
         mock_resolve._album1.ExportStills.return_value = False
-        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
-            ValidationError, match="Failed to export stills"
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="Failed to export stills"),
         ):
             gallery_still_export_impl(folder_path="/tmp/stills")
 
@@ -197,8 +201,9 @@ class TestGalleryStillImportImpl:
 
     def test_still_import_failure(self, mock_resolve):
         mock_resolve._album1.ImportStills.return_value = False
-        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
-            ValidationError, match="Failed to import stills"
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="Failed to import stills"),
         ):
             gallery_still_import_impl(paths=["/tmp/still1.dpx"])
 
@@ -219,15 +224,17 @@ class TestGalleryStillDeleteImpl:
         assert result["deleted"] == 1
 
     def test_still_delete_out_of_range(self, mock_resolve):
-        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
-            ValidationError, match="out of range"
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="out of range"),
         ):
             gallery_still_delete_impl(still_indices=[5])
 
     def test_still_delete_failure(self, mock_resolve):
         mock_resolve._album1.DeleteStills.return_value = False
-        with patch(RESOLVE_PATCH, return_value=mock_resolve), pytest.raises(
-            ValidationError, match="Failed to delete stills"
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="Failed to delete stills"),
         ):
             gallery_still_delete_impl(still_indices=[0])
 
@@ -244,9 +251,7 @@ class TestGalleryCLI:
         assert data["name"] == "Album 2"
 
     def test_album_create_dry_run_cli(self):
-        result = CliRunner().invoke(
-            dr, ["gallery", "album", "create", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["gallery", "album", "create", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -282,9 +287,7 @@ class TestGalleryCLI:
         assert data["still_indices"] == [0, 1]
 
     def test_still_grab_dry_run_cli(self):
-        result = CliRunner().invoke(
-            dr, ["gallery", "still", "grab", "0", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["gallery", "still", "grab", "0", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -292,9 +295,7 @@ class TestGalleryCLI:
         assert data["clip_index"] == 0
 
     def test_still_list_cli(self, mock_resolve):
-        with patch(
-            "davinci_cli.commands.color.get_resolve", return_value=mock_resolve
-        ):
+        with patch("davinci_cli.commands.color.get_resolve", return_value=mock_resolve):
             result = CliRunner().invoke(dr, ["gallery", "still", "list"])
         assert result.exit_code == 0
         # NDJSON output: one line per still

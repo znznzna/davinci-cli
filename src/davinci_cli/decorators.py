@@ -27,7 +27,7 @@ class _JsonParamType(click.ParamType):
 
     name = "JSON"
 
-    def convert(self, value: Any, param: Any, ctx: Any) -> dict | None:
+    def convert(self, value: Any, param: Any, ctx: Any) -> dict[str, Any] | None:
         if value is None:
             return None
         if isinstance(value, dict):
@@ -35,7 +35,9 @@ class _JsonParamType(click.ParamType):
         try:
             parsed = json_module.loads(value)
             if not isinstance(parsed, dict):
-                self.fail(f"Expected JSON object, got {type(parsed).__name__}", param, ctx)
+                self.fail(
+                    f"Expected JSON object, got {type(parsed).__name__}", param, ctx
+                )
             return parsed
         except json_module.JSONDecodeError as e:
             self.fail(f"Invalid JSON: {e}", param, ctx)
@@ -45,7 +47,7 @@ class _JsonParamType(click.ParamType):
 JSON_TYPE = _JsonParamType()
 
 
-def json_input_option(func: Callable) -> Callable:
+def json_input_option(func: Callable[..., Any]) -> Callable[..., Any]:
     """--json オプションを追加するデコレータ。"""
     return click.option(
         "--json",
@@ -63,7 +65,7 @@ def _parse_fields(ctx: Any, param: Any, value: str | None) -> list[str] | None:
     return [f.strip() for f in value.split(",") if f.strip()]
 
 
-def fields_option(func: Callable) -> Callable:
+def fields_option(func: Callable[..., Any]) -> Callable[..., Any]:
     """--fields オプションを追加するデコレータ。"""
     return click.option(
         "--fields",
@@ -75,7 +77,7 @@ def fields_option(func: Callable) -> Callable:
     )(func)
 
 
-def dry_run_option(func: Callable) -> Callable:
+def dry_run_option(func: Callable[..., Any]) -> Callable[..., Any]:
     """--dry-run オプションを追加するデコレータ。"""
     return click.option(
         "--dry-run",

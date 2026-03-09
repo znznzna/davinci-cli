@@ -201,7 +201,9 @@ class TestMarkerImpl:
 
     def test_marker_list_frame_offset_applied(self, mock_resolve):
         """開始TC=01:00:00:00のとき、marker_listのframe_idにオフセットが加算される。"""
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.GetStartTimecode.return_value = "01:00:00:00"
         timeline.GetMarkers.return_value = {
             0: {"color": "Blue", "name": "Start", "note": "", "duration": 1},
@@ -214,7 +216,9 @@ class TestMarkerImpl:
 
     def test_marker_add_converts_absolute_to_relative(self, mock_resolve):
         """marker_addは絶対フレーム→相対フレームに変換してAPIを呼ぶ。"""
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.GetStartTimecode.return_value = "01:00:00:00"
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = marker_add_impl(frame_id=86500, color="Blue", name="Test")
@@ -224,7 +228,9 @@ class TestMarkerImpl:
 
     def test_marker_delete_converts_absolute_to_relative(self, mock_resolve):
         """marker_deleteは絶対フレーム→相対フレームに変換してAPIを呼ぶ。"""
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.GetStartTimecode.return_value = "01:00:00:00"
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             marker_delete_impl(frame_id=86500)
@@ -232,9 +238,7 @@ class TestMarkerImpl:
         timeline.DeleteMarkerAtFrame.assert_called_once_with(100)
 
     def test_marker_add_dry_run(self):
-        result = marker_add_impl(
-            frame_id=100, color="Blue", name="VFX", dry_run=True
-        )
+        result = marker_add_impl(frame_id=100, color="Blue", name="VFX", dry_run=True)
         assert result["dry_run"] is True
 
     def test_marker_delete_dry_run(self):
@@ -243,7 +247,9 @@ class TestMarkerImpl:
 
     def test_marker_add_fails_returns_validation_error(self, mock_resolve):
         """AddMarker が False を返す → ValidationError。"""
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.GetStartTimecode.return_value = "01:00:00:00"
         timeline.AddMarker.return_value = False
         with (
@@ -254,7 +260,9 @@ class TestMarkerImpl:
 
     def test_marker_delete_fails_returns_validation_error(self, mock_resolve):
         """DeleteMarkerAtFrame が False を返す → ValidationError。"""
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.GetStartTimecode.return_value = "01:00:00:00"
         timeline.DeleteMarkerAtFrame.return_value = False
         with (
@@ -266,7 +274,9 @@ class TestMarkerImpl:
 
 class TestTimecodeImpl:
     def test_timecode_get(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.GetCurrentTimecode.return_value = "01:00:00:00"
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = timecode_get_impl()
@@ -281,7 +291,9 @@ class TestTimecodeImpl:
         }
 
     def test_timecode_set(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.SetCurrentTimecode.return_value = True
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = timecode_set_impl("01:00:05:00")
@@ -289,7 +301,9 @@ class TestTimecodeImpl:
         timeline.SetCurrentTimecode.assert_called_once_with("01:00:05:00")
 
     def test_timecode_set_failure(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.SetCurrentTimecode.return_value = False
         with (
             patch(RESOLVE_PATCH, return_value=mock_resolve),
@@ -300,7 +314,9 @@ class TestTimecodeImpl:
 
 class TestCurrentItemImpl:
     def test_current_item(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         item = MagicMock()
         item.GetName.return_value = "Clip1"
         timeline.GetCurrentVideoItem.return_value = item
@@ -309,7 +325,9 @@ class TestCurrentItemImpl:
         assert result == {"name": "Clip1"}
 
     def test_current_item_none(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.GetCurrentVideoItem.return_value = None
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = current_item_impl()
@@ -338,14 +356,18 @@ class TestTrackImpl:
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = track_add_impl("video")
         assert result == {"added": True, "track_type": "video"}
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.AddTrack.assert_called_once_with("video")
 
     def test_track_add_with_sub_type(self, mock_resolve):
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = track_add_impl("audio", sub_track_type="mono")
         assert result == {"added": True, "track_type": "audio"}
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.AddTrack.assert_called_once_with("audio", "mono")
 
     def test_track_delete_dry_run(self):
@@ -361,7 +383,9 @@ class TestTrackImpl:
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = track_delete_impl("video", 2)
         assert result == {"deleted": True, "track_type": "video", "index": 2}
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.DeleteTrack.assert_called_once_with("video", 2)
 
     def test_track_add_invalid_type(self):
@@ -373,7 +397,9 @@ class TestTrackImpl:
             track_delete_impl("invalid", 1)
 
     def test_track_add_failure(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.AddTrack.return_value = False
         with (
             patch(RESOLVE_PATCH, return_value=mock_resolve),
@@ -382,7 +408,9 @@ class TestTrackImpl:
             track_add_impl("video")
 
     def test_track_delete_failure(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.DeleteTrack.return_value = False
         with (
             patch(RESOLVE_PATCH, return_value=mock_resolve),
@@ -400,12 +428,21 @@ class TestTrackEnableLockImpl:
     def test_track_enable_set(self, mock_resolve):
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = track_enable_impl("video", 1, enabled=False)
-        assert result == {"set": True, "enabled": False, "track_type": "video", "index": 1}
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        assert result == {
+            "set": True,
+            "enabled": False,
+            "track_type": "video",
+            "index": 1,
+        }
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.SetTrackEnable.assert_called_once_with("video", 1, False)
 
     def test_track_enable_set_failure(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.SetTrackEnable.return_value = False
         with (
             patch(RESOLVE_PATCH, return_value=mock_resolve),
@@ -425,12 +462,21 @@ class TestTrackEnableLockImpl:
     def test_track_lock_set(self, mock_resolve):
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = track_lock_impl("video", 1, locked=True)
-        assert result == {"set": True, "locked": True, "track_type": "video", "index": 1}
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        assert result == {
+            "set": True,
+            "locked": True,
+            "track_type": "video",
+            "index": 1,
+        }
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.SetTrackLock.assert_called_once_with("video", 1, True)
 
     def test_track_lock_set_failure(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.SetTrackLock.return_value = False
         with (
             patch(RESOLVE_PATCH, return_value=mock_resolve),
@@ -449,7 +495,9 @@ class TestTimelineExtendedImpl:
         assert result == {"dry_run": True, "action": "duplicate", "name": "copy"}
 
     def test_duplicate(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         new_tl = MagicMock()
         new_tl.GetName.return_value = "copy"
         timeline.DuplicateTimeline.return_value = new_tl
@@ -459,7 +507,9 @@ class TestTimelineExtendedImpl:
         timeline.DuplicateTimeline.assert_called_once_with("copy")
 
     def test_duplicate_no_name(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         new_tl = MagicMock()
         new_tl.GetName.return_value = "Main Edit copy"
         timeline.DuplicateTimeline.return_value = new_tl
@@ -469,7 +519,9 @@ class TestTimelineExtendedImpl:
         timeline.DuplicateTimeline.assert_called_once_with()
 
     def test_duplicate_failure(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.DuplicateTimeline.return_value = None
         with (
             patch(RESOLVE_PATCH, return_value=mock_resolve),
@@ -478,28 +530,36 @@ class TestTimelineExtendedImpl:
             timeline_duplicate_impl("copy")
 
     def test_detect_scene_cuts(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.DetectSceneCuts.return_value = True
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = timeline_detect_scene_cuts_impl()
         assert result == {"detected": True}
 
     def test_detect_scene_cuts_false(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.DetectSceneCuts.return_value = False
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = timeline_detect_scene_cuts_impl()
         assert result == {"detected": False}
 
     def test_create_subtitles(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.CreateSubtitlesFromAudio.return_value = True
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = timeline_create_subtitles_impl()
         assert result == {"created": True}
 
     def test_create_subtitles_false(self, mock_resolve):
-        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        timeline = (
+            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
+        )
         timeline.CreateSubtitlesFromAudio.return_value = False
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = timeline_create_subtitles_impl()
@@ -524,7 +584,14 @@ class TestTimelineCLI:
     def test_marker_delete_json_input(self):
         result = CliRunner().invoke(
             dr,
-            ["timeline", "marker", "delete", "--json", '{"frame_id": 100}', "--dry-run"],
+            [
+                "timeline",
+                "marker",
+                "delete",
+                "--json",
+                '{"frame_id": 100}',
+                "--dry-run",
+            ],
         )
         assert result.exit_code == 0
         data = json.loads(result.output)
@@ -541,7 +608,5 @@ class TestTimelineCLI:
         assert data["frame_id"] == 100
 
     def test_marker_delete_no_arg_error(self):
-        result = CliRunner().invoke(
-            dr, ["timeline", "marker", "delete"]
-        )
+        result = CliRunner().invoke(dr, ["timeline", "marker", "delete"])
         assert result.exit_code != 0

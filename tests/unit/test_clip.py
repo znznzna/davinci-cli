@@ -102,9 +102,7 @@ class TestClipPropertyImpl:
         assert "value" in result
 
     def test_property_set_dry_run(self):
-        result = clip_property_set_impl(
-            index=0, key="Pan", value="0.5", dry_run=True
-        )
+        result = clip_property_set_impl(index=0, key="Pan", value="0.5", dry_run=True)
         assert result["dry_run"] is True
         assert result["key"] == "Pan"
 

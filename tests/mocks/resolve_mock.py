@@ -62,7 +62,9 @@ class MockProject:
     ) -> None:
         self._name = name
         self._timeline_count = timeline_count
-        self._timelines = [MockTimeline(f"Timeline {i + 1}") for i in range(timeline_count)]
+        self._timelines = [
+            MockTimeline(f"Timeline {i + 1}") for i in range(timeline_count)
+        ]
 
     def GetName(self) -> str:
         return self._name
