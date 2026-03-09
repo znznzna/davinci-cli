@@ -171,13 +171,14 @@ def beat_marker_impl(
             "frames": frames,
         }
 
-    # 6. マーカー追加（マーカーAPIは相対フレームを要求）
+    # 6. マーカー追加（マーカーAPIは相対フレームを要求、空nameは拒否される）
     from davinci_cli.commands.timeline import _get_start_frame_offset
 
     offset = _get_start_frame_offset(tl)
+    marker_name = name or " "
     for frame_abs in frames:
         rel_frame = frame_abs - offset
-        tl.AddMarker(rel_frame, color, name, "", duration)
+        tl.AddMarker(rel_frame, color, marker_name, "", duration)
 
     return {
         "added_count": len(frames),
