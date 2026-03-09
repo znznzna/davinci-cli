@@ -108,9 +108,7 @@ class TestFolderImpl:
 
 class TestMediaExtendedImpl:
     def test_media_move_dry_run(self):
-        result = media_move_impl(
-            clip_names=["clip1.mov"], target_folder="VFX", dry_run=True
-        )
+        result = media_move_impl(clip_names=["clip1.mov"], target_folder="VFX", dry_run=True)
         assert result["dry_run"] is True
         assert result["action"] == "media_move"
 
@@ -118,12 +116,7 @@ class TestMediaExtendedImpl:
         # Add a target subfolder to root
         target = MagicMock()
         target.GetName.return_value = "VFX"
-        root = (
-            mock_resolve.GetProjectManager()
-            .GetCurrentProject()
-            .GetMediaPool()
-            .GetRootFolder()
-        )
+        root = mock_resolve.GetProjectManager().GetCurrentProject().GetMediaPool().GetRootFolder()
         root.GetSubFolderList.return_value = [target]
         media_pool = mock_resolve.GetProjectManager().GetCurrentProject().GetMediaPool()
         media_pool.MoveClips.return_value = True
@@ -155,9 +148,7 @@ class TestMediaExtendedImpl:
         media_pool.DeleteClips.assert_called_once()
 
     def test_media_relink_dry_run(self):
-        result = media_relink_impl(
-            clip_names=["clip1.mov"], folder_path="/media/new", dry_run=True
-        )
+        result = media_relink_impl(clip_names=["clip1.mov"], folder_path="/media/new", dry_run=True)
         assert result["dry_run"] is True
         assert result["action"] == "media_relink"
 
@@ -166,9 +157,7 @@ class TestMediaExtendedImpl:
         media_pool.RelinkClips.return_value = True
 
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            result = media_relink_impl(
-                clip_names=["clip1.mov"], folder_path=str(tmp_path)
-            )
+            result = media_relink_impl(clip_names=["clip1.mov"], folder_path=str(tmp_path))
         assert result["relinked_count"] == 1
         media_pool.RelinkClips.assert_called_once()
 
@@ -346,7 +335,5 @@ class TestMediaCLI:
         assert result.exit_code == 0
 
     def test_media_folder_delete_dry_run(self):
-        result = CliRunner().invoke(
-            dr, ["media", "folder", "delete", "old", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["media", "folder", "delete", "old", "--dry-run"])
         assert result.exit_code == 0

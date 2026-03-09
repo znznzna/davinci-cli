@@ -158,14 +158,10 @@ class TestProjectRenameImpl:
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = project_rename_impl("NewName")
         assert result == {"renamed": True, "name": "NewName"}
-        mock_resolve.GetProjectManager().GetCurrentProject().SetName.assert_called_with(
-            "NewName"
-        )
+        mock_resolve.GetProjectManager().GetCurrentProject().SetName.assert_called_with("NewName")
 
     def test_rename_failure(self, mock_resolve):
-        mock_resolve.GetProjectManager().GetCurrentProject().SetName.return_value = (
-            False
-        )
+        mock_resolve.GetProjectManager().GetCurrentProject().SetName.return_value = False
         with (
             patch(RESOLVE_PATCH, return_value=mock_resolve),
             pytest.raises(ValidationError, match="Failed to rename"),

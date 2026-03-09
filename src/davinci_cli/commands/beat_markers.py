@@ -7,14 +7,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
-
 import click
+from pydantic import BaseModel
 
 from davinci_cli.core.connection import get_resolve
 from davinci_cli.core.exceptions import ProjectNotOpenError, ValidationError
 from davinci_cli.decorators import dry_run_option, json_input_option
 from davinci_cli.output.formatter import output
+from davinci_cli.schema_registry import register_schema
 
 # 音価 → 1拍あたりの倍率マッピング
 NOTE_VALUE_MAP: dict[str, float] = {
@@ -128,9 +128,10 @@ def beat_marker_impl(
     """BPM と音価を指定して、指定クリップの範囲にマーカーを配置する。"""
     # 1. バリデーション
     if note_value not in NOTE_VALUE_MAP:
+        valid = ", ".join(NOTE_VALUE_MAP)
         raise ValidationError(
             field="note_value",
-            reason=f"Invalid note_value: '{note_value}'. Must be one of: {', '.join(NOTE_VALUE_MAP)}",
+            reason=f"Invalid note_value: '{note_value}'. Must be one of: {valid}",
         )
     if not (20.0 <= bpm <= 300.0):
         raise ValidationError(
@@ -228,8 +229,6 @@ def beat_marker_cmd(
     )
     output(result, pretty=ctx.obj.get("pretty"))
 
-
-from davinci_cli.schema_registry import register_schema
 
 # --- Schema Registration ---
 

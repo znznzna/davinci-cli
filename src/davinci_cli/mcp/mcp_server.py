@@ -14,6 +14,7 @@ from typing import Any
 
 from fastmcp import FastMCP
 
+from davinci_cli.commands.beat_markers import beat_marker_impl
 from davinci_cli.commands.clip import (
     clip_color_clear_impl,
     clip_color_get_impl,
@@ -110,7 +111,6 @@ from davinci_cli.commands.system import (
     ping_impl,
     version_impl,
 )
-from davinci_cli.commands.beat_markers import beat_marker_impl
 from davinci_cli.commands.timeline import (
     current_item_impl,
     marker_add_impl,
@@ -355,9 +355,7 @@ def project_rename(name: str, dry_run: bool = True) -> dict[str, Any]:
 
 @mcp.tool(
     description=(
-        "Save the current project.\n"
-        "[risk_level: write] [mutating: true]\n"
-        "No parameters required."
+        "Save the current project.\n[risk_level: write] [mutating: true]\nNo parameters required."
     )
 )
 @mcp_error_handler
@@ -796,9 +794,7 @@ def clip_property_get(index: int, key: str) -> dict[str, Any]:
     )
 )
 @mcp_error_handler
-def clip_property_set(
-    index: int, key: str, value: str, dry_run: bool = True
-) -> dict[str, Any]:
+def clip_property_set(index: int, key: str, value: str, dry_run: bool = True) -> dict[str, Any]:
     return clip_property_set_impl(index=index, key=key, value=value, dry_run=dry_run)
 
 
@@ -904,12 +900,8 @@ def clip_flag_clear(index: int, color: str = "All") -> dict[str, Any]:
     )
 )
 @mcp_error_handler
-def color_apply_lut(
-    clip_index: int, lut_path: str, dry_run: bool = True
-) -> dict[str, Any]:
-    return color_apply_lut_impl(
-        clip_index=clip_index, lut_path=lut_path, dry_run=dry_run
-    )
+def color_apply_lut(clip_index: int, lut_path: str, dry_run: bool = True) -> dict[str, Any]:
+    return color_apply_lut_impl(clip_index=clip_index, lut_path=lut_path, dry_run=dry_run)
 
 
 @mcp.tool(
@@ -934,12 +926,8 @@ def color_reset(clip_index: int, dry_run: bool = True) -> dict[str, Any]:
     )
 )
 @mcp_error_handler
-def color_copy_grade(
-    from_index: int, to_index: int, dry_run: bool = True
-) -> dict[str, Any]:
-    return color_copy_grade_impl(
-        from_index=from_index, to_index=to_index, dry_run=dry_run
-    )
+def color_copy_grade(from_index: int, to_index: int, dry_run: bool = True) -> dict[str, Any]:
+    return color_copy_grade_impl(from_index=from_index, to_index=to_index, dry_run=dry_run)
 
 
 @mcp.tool(
@@ -1223,9 +1211,7 @@ def color_still_list() -> list[dict[str, Any]]:
     )
 )
 @mcp_error_handler
-def media_list(
-    folder: str | None = None, fields: str | None = None
-) -> list[dict[str, Any]]:
+def media_list(folder: str | None = None, fields: str | None = None) -> list[dict[str, Any]]:
     field_list = fields.split(",") if fields else None
     return media_list_impl(folder_name=folder, fields=field_list)
 
@@ -1252,12 +1238,8 @@ def media_import(paths: list[str]) -> dict[str, Any]:
     )
 )
 @mcp_error_handler
-def media_move(
-    clip_names: list[str], target_folder: str, dry_run: bool = True
-) -> dict[str, Any]:
-    return media_move_impl(
-        clip_names=clip_names, target_folder=target_folder, dry_run=dry_run
-    )
+def media_move(clip_names: list[str], target_folder: str, dry_run: bool = True) -> dict[str, Any]:
+    return media_move_impl(clip_names=clip_names, target_folder=target_folder, dry_run=dry_run)
 
 
 @mcp.tool(
@@ -1284,12 +1266,8 @@ def media_delete(clip_names: list[str], dry_run: bool = True) -> dict[str, Any]:
     )
 )
 @mcp_error_handler
-def media_relink(
-    clip_names: list[str], folder_path: str, dry_run: bool = True
-) -> dict[str, Any]:
-    return media_relink_impl(
-        clip_names=clip_names, folder_path=folder_path, dry_run=dry_run
-    )
+def media_relink(clip_names: list[str], folder_path: str, dry_run: bool = True) -> dict[str, Any]:
+    return media_relink_impl(clip_names=clip_names, folder_path=folder_path, dry_run=dry_run)
 
 
 @mcp.tool(
@@ -1329,9 +1307,7 @@ def media_metadata_get(clip_name: str, key: str | None = None) -> dict[str, Any]
 def media_metadata_set(
     clip_name: str, key: str, value: str, dry_run: bool = True
 ) -> dict[str, Any]:
-    return media_metadata_set_impl(
-        clip_name=clip_name, key=key, value=value, dry_run=dry_run
-    )
+    return media_metadata_set_impl(clip_name=clip_name, key=key, value=value, dry_run=dry_run)
 
 
 @mcp.tool(
@@ -1463,9 +1439,7 @@ def deliver_list_jobs(fields: str | None = None) -> list[dict[str, Any]]:
     )
 )
 @mcp_error_handler
-def deliver_start(
-    job_ids: list[str] | None = None, dry_run: bool = True
-) -> dict[str, Any]:
+def deliver_start(job_ids: list[str] | None = None, dry_run: bool = True) -> dict[str, Any]:
     return deliver_start_impl(job_ids=job_ids, dry_run=dry_run)
 
 
@@ -1598,9 +1572,7 @@ def deliver_preset_export(name: str, path: str, dry_run: bool = True) -> dict[st
 
 @mcp.tool(
     description=(
-        "List all gallery albums.\n"
-        "[risk_level: read] [mutating: false]\n"
-        "No parameters required."
+        "List all gallery albums.\n[risk_level: read] [mutating: false]\nNo parameters required."
     )
 )
 @mcp_error_handler
@@ -1691,9 +1663,7 @@ def gallery_still_import(paths: list[str], dry_run: bool = True) -> dict[str, An
     )
 )
 @mcp_error_handler
-def gallery_still_delete(
-    still_indices: list[int], dry_run: bool = True
-) -> dict[str, Any]:
+def gallery_still_delete(still_indices: list[int], dry_run: bool = True) -> dict[str, Any]:
     return gallery_still_delete_impl(still_indices=still_indices, dry_run=dry_run)
 
 

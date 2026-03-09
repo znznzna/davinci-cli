@@ -189,9 +189,7 @@ def project_rename_impl(name: str, dry_run: bool = False) -> dict[str, Any]:
     project = _get_current_project()
     result = project.SetName(name)
     if result is False:
-        raise ValidationError(
-            field="name", reason=f"Failed to rename project to: {name}"
-        )
+        raise ValidationError(field="name", reason=f"Failed to rename project to: {name}")
     return {"renamed": True, "name": name}
 
 
@@ -223,9 +221,7 @@ def project_settings_get_impl(key: str | None = None) -> dict[str, Any]:
     return {"settings": "all settings retrieval not implemented yet"}
 
 
-def project_settings_set_impl(
-    key: str, value: str, dry_run: bool = False
-) -> dict[str, Any]:
+def project_settings_set_impl(key: str, value: str, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {
             "dry_run": True,
@@ -399,9 +395,7 @@ def settings_set(ctx: click.Context, key: str, value: str, dry_run: bool) -> Non
 # --- Schema Registration ---
 
 register_schema("project.list", output_model=ProjectListItem)
-register_schema(
-    "project.open", output_model=ProjectOpenOutput, input_model=ProjectOpenInput
-)
+register_schema("project.open", output_model=ProjectOpenOutput, input_model=ProjectOpenInput)
 register_schema("project.close", output_model=ProjectCloseOutput)
 register_schema(
     "project.create",

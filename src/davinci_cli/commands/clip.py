@@ -243,9 +243,7 @@ def clip_color_set_impl(index: int, color: str) -> dict[str, Any]:
     clip_item = _get_clip_item_by_index(tl, index)
     result = clip_item.SetClipColor(color)
     if result is False:
-        raise ValidationError(
-            field="color", reason=f"Failed to set clip color: {color}"
-        )
+        raise ValidationError(field="color", reason=f"Failed to set clip color: {color}")
     return {"set": True, "color": color, "clip_index": index}
 
 
@@ -364,9 +362,7 @@ def property_set(
 
 @clip.command(name="enable")
 @click.argument("index", type=int)
-@click.option(
-    "--value", type=bool, default=None, help="Set enabled state (omit to get)"
-)
+@click.option("--value", type=bool, default=None, help="Set enabled state (omit to get)")
 @click.pass_context
 def clip_enable(ctx: click.Context, index: int, value: bool | None) -> None:
     """クリップ有効/無効の取得・設定。"""

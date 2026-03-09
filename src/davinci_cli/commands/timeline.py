@@ -455,9 +455,7 @@ def timecode_set_impl(timecode: str, dry_run: bool = False) -> dict[str, Any]:
     tl = _get_current_timeline()
     result = tl.SetCurrentTimecode(timecode)
     if result is False:
-        raise ValidationError(
-            field="timecode", reason=f"Failed to set timecode: {timecode}"
-        )
+        raise ValidationError(field="timecode", reason=f"Failed to set timecode: {timecode}")
     return {"set": True, "timecode": timecode}
 
 
@@ -499,21 +497,13 @@ def track_add_impl(
             "sub_track_type": sub_track_type,
         }
     tl = _get_current_timeline()
-    result = (
-        tl.AddTrack(track_type, sub_track_type)
-        if sub_track_type
-        else tl.AddTrack(track_type)
-    )
+    result = tl.AddTrack(track_type, sub_track_type) if sub_track_type else tl.AddTrack(track_type)
     if result is False:
-        raise ValidationError(
-            field="track_type", reason=f"Failed to add {track_type} track"
-        )
+        raise ValidationError(field="track_type", reason=f"Failed to add {track_type} track")
     return {"added": True, "track_type": track_type}
 
 
-def track_delete_impl(
-    track_type: str, index: int, dry_run: bool = False
-) -> dict[str, Any]:
+def track_delete_impl(track_type: str, index: int, dry_run: bool = False) -> dict[str, Any]:
     """トラックを削除する。"""
     if track_type not in _VALID_TRACK_TYPES:
         raise ValidationError(
@@ -537,9 +527,7 @@ def track_delete_impl(
     return {"deleted": True, "track_type": track_type, "index": index}
 
 
-def track_enable_impl(
-    track_type: str, index: int, enabled: bool | None = None
-) -> dict[str, Any]:
+def track_enable_impl(track_type: str, index: int, enabled: bool | None = None) -> dict[str, Any]:
     """トラックの有効/無効を取得または設定する。"""
     if track_type not in _VALID_TRACK_TYPES:
         raise ValidationError(
@@ -556,9 +544,7 @@ def track_enable_impl(
     return {"set": True, "enabled": enabled, "track_type": track_type, "index": index}
 
 
-def track_lock_impl(
-    track_type: str, index: int, locked: bool | None = None
-) -> dict[str, Any]:
+def track_lock_impl(track_type: str, index: int, locked: bool | None = None) -> dict[str, Any]:
     """トラックのロック状態を取得または設定する。"""
     if track_type not in _VALID_TRACK_TYPES:
         raise ValidationError(
@@ -583,9 +569,7 @@ def current_item_impl() -> dict[str, Any]:
     return {"name": item.GetName()}
 
 
-def timeline_duplicate_impl(
-    name: str | None = None, dry_run: bool = False
-) -> dict[str, Any]:
+def timeline_duplicate_impl(name: str | None = None, dry_run: bool = False) -> dict[str, Any]:
     if dry_run:
         return {"dry_run": True, "action": "duplicate", "name": name}
     tl = _get_current_timeline()
@@ -664,9 +648,7 @@ def timeline_create(
         height = data.height
     if not name:
         raise click.UsageError("--name or --json is required")
-    result = timeline_create_impl(
-        name=name, fps=fps, width=width, height=height, dry_run=dry_run
-    )
+    result = timeline_create_impl(name=name, fps=fps, width=width, height=height, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
 
 
@@ -684,9 +666,7 @@ def timeline_delete(ctx: click.Context, name: str, dry_run: bool) -> None:
 @json_input_option
 @dry_run_option
 @click.pass_context
-def timeline_export(
-    ctx: click.Context, json_input: dict[str, Any] | None, dry_run: bool
-) -> None:
+def timeline_export(ctx: click.Context, json_input: dict[str, Any] | None, dry_run: bool) -> None:
     """タイムラインエクスポート（XML/AAF/EDL）。"""
     if not json_input:
         raise click.UsageError("--json is required for export")
@@ -781,9 +761,7 @@ def track_list_cmd(ctx: click.Context) -> None:
 
 @timeline_track.command(name="add")
 @click.option("--track-type", required=True, help="Track type: video, audio, subtitle")
-@click.option(
-    "--sub-track-type", default=None, help="Sub track type (e.g., mono, stereo)"
-)
+@click.option("--sub-track-type", default=None, help="Sub track type (e.g., mono, stereo)")
 @json_input_option
 @dry_run_option
 @click.pass_context
@@ -801,9 +779,7 @@ def track_add_cmd(
         sub_track_type = data.sub_track_type
     if not track_type:
         raise click.UsageError("--track-type or --json is required")
-    result = track_add_impl(
-        track_type=track_type, sub_track_type=sub_track_type, dry_run=dry_run
-    )
+    result = track_add_impl(track_type=track_type, sub_track_type=sub_track_type, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
 
 
@@ -834,9 +810,7 @@ def track_delete_cmd(
 @timeline_track.command(name="enable")
 @click.option("--track-type", required=True, help="Track type: video, audio, subtitle")
 @click.option("--index", required=True, type=int, help="Track index (1-based)")
-@click.option(
-    "--value", type=bool, default=None, help="Set enabled state (omit to get)"
-)
+@click.option("--value", type=bool, default=None, help="Set enabled state (omit to get)")
 @json_input_option
 @click.pass_context
 def track_enable_cmd(
@@ -901,9 +875,7 @@ def marker_list_cmd(ctx: click.Context, timeline_name: str | None) -> None:
 @json_input_option
 @dry_run_option
 @click.pass_context
-def marker_add_cmd(
-    ctx: click.Context, json_input: dict[str, Any] | None, dry_run: bool
-) -> None:
+def marker_add_cmd(ctx: click.Context, json_input: dict[str, Any] | None, dry_run: bool) -> None:
     """マーカー追加。"""
     if not json_input:
         raise click.UsageError("--json is required")
@@ -940,7 +912,7 @@ def marker_delete_cmd(
     output(result, pretty=ctx.obj.get("pretty"))
 
 
-from davinci_cli.commands.beat_markers import beat_marker_cmd
+from davinci_cli.commands.beat_markers import beat_marker_cmd  # noqa: E402
 
 timeline_marker.add_command(beat_marker_cmd)
 
@@ -992,9 +964,7 @@ register_schema(
     output_model=TimelineDuplicateOutput,
     input_model=TimelineDuplicateInput,
 )
-register_schema(
-    "timeline.detect-scene-cuts", output_model=TimelineDetectSceneCutsOutput
-)
+register_schema("timeline.detect-scene-cuts", output_model=TimelineDetectSceneCutsOutput)
 register_schema("timeline.create-subtitles", output_model=TimelineCreateSubtitlesOutput)
 register_schema("timeline.track.list", output_model=TrackListItem)
 register_schema(

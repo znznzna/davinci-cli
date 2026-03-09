@@ -177,9 +177,7 @@ def deliver_preset_load_impl(name: str) -> dict[str, Any]:
     return {"loaded": name}
 
 
-def deliver_add_job_impl(
-    job_data: dict[str, Any], dry_run: bool = False
-) -> dict[str, Any]:
+def deliver_add_job_impl(job_data: dict[str, Any], dry_run: bool = False) -> dict[str, Any]:
     validated = RenderJobInput.model_validate(job_data)
     if dry_run:
         return {
@@ -330,9 +328,7 @@ def deliver_delete_job_impl(job_id: str, dry_run: bool = False) -> dict[str, Any
     project = _get_current_project()
     result = project.DeleteRenderJob(job_id)
     if result is False:
-        raise ValidationError(
-            field="job_id", reason=f"Failed to delete render job: {job_id}"
-        )
+        raise ValidationError(field="job_id", reason=f"Failed to delete render job: {job_id}")
     return {"deleted": True, "job_id": job_id}
 
 
@@ -421,9 +417,7 @@ def deliver_preset_import_impl(path: str, dry_run: bool = False) -> dict[str, An
     return {"imported": True, "path": str(validated)}
 
 
-def deliver_preset_export_impl(
-    name: str, path: str, dry_run: bool = False
-) -> dict[str, Any]:
+def deliver_preset_export_impl(name: str, path: str, dry_run: bool = False) -> dict[str, Any]:
     """レンダープリセットをエクスポートする。"""
     validated = validate_path(path)
     if dry_run:
@@ -474,9 +468,7 @@ def preset_load(ctx: click.Context, name: str) -> None:
 @json_input_option
 @dry_run_option
 @click.pass_context
-def add_job(
-    ctx: click.Context, json_input: dict[str, Any] | None, dry_run: bool
-) -> None:
+def add_job(ctx: click.Context, json_input: dict[str, Any] | None, dry_run: bool) -> None:
     """レンダージョブ追加。"""
     if not json_input:
         raise click.UsageError("--json is required")

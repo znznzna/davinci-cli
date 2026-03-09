@@ -111,9 +111,7 @@ class TestGalleryAlbumSetImpl:
     def test_album_set(self, mock_resolve):
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = gallery_album_set_impl(name="Album 2")
-        mock_resolve._gallery.SetCurrentStillAlbum.assert_called_once_with(
-            mock_resolve._album2
-        )
+        mock_resolve._gallery.SetCurrentStillAlbum.assert_called_once_with(mock_resolve._album2)
         assert result == {"set": True, "name": "Album 2"}
 
     def test_album_set_not_found(self, mock_resolve):
@@ -193,9 +191,7 @@ class TestGalleryStillImportImpl:
 
     def test_still_import(self, mock_resolve):
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            result = gallery_still_import_impl(
-                paths=["/tmp/still1.dpx", "/tmp/still2.dpx"]
-            )
+            result = gallery_still_import_impl(paths=["/tmp/still1.dpx", "/tmp/still2.dpx"])
         mock_resolve._album1.ImportStills.assert_called_once()
         assert result["imported"] is True
 
@@ -218,9 +214,7 @@ class TestGalleryStillDeleteImpl:
     def test_still_delete(self, mock_resolve):
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = gallery_still_delete_impl(still_indices=[0])
-        mock_resolve._album1.DeleteStills.assert_called_once_with(
-            [mock_resolve._still1]
-        )
+        mock_resolve._album1.DeleteStills.assert_called_once_with([mock_resolve._still1])
         assert result["deleted"] == 1
 
     def test_still_delete_out_of_range(self, mock_resolve):
@@ -241,9 +235,7 @@ class TestGalleryStillDeleteImpl:
 
 class TestGalleryCLI:
     def test_album_set_dry_run_cli(self):
-        result = CliRunner().invoke(
-            dr, ["gallery", "album", "set", "Album 2", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["gallery", "album", "set", "Album 2", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -258,9 +250,7 @@ class TestGalleryCLI:
         assert data["action"] == "album_create"
 
     def test_still_export_dry_run_cli(self):
-        result = CliRunner().invoke(
-            dr, ["gallery", "still", "export", "/tmp/stills", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["gallery", "still", "export", "/tmp/stills", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -277,9 +267,7 @@ class TestGalleryCLI:
         assert data["action"] == "still_import"
 
     def test_still_delete_dry_run_cli(self):
-        result = CliRunner().invoke(
-            dr, ["gallery", "still", "delete", "0", "1", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["gallery", "still", "delete", "0", "1", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True

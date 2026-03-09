@@ -1,11 +1,15 @@
 """Beat markers — _calculate_beat_frames() 純粋関数テスト。"""
 
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
+from click.testing import CliRunner
 
+from davinci_cli.cli import dr
 from davinci_cli.commands.beat_markers import _calculate_beat_frames, beat_marker_impl
 from davinci_cli.core.exceptions import ProjectNotOpenError, ValidationError
+from davinci_cli.schema_registry import SCHEMA_REGISTRY
 
 RESOLVE_PATCH = "davinci_cli.commands.beat_markers.get_resolve"
 
@@ -150,9 +154,7 @@ class TestBeatMarkerImplDryRun:
     def test_dry_run_returns_preview(self, mock_resolve):
         """dry-run でフレーム一覧が返る"""
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            result = beat_marker_impl(
-                bpm=120, clip_index=1, note_value="1/4", dry_run=True
-            )
+            result = beat_marker_impl(bpm=120, clip_index=1, note_value="1/4", dry_run=True)
         assert result["dry_run"] is True
         assert result["action"] == "marker_beats"
         assert result["bpm"] == 120
@@ -164,9 +166,7 @@ class TestBeatMarkerImplDryRun:
     def test_dry_run_frame_values(self, mock_resolve):
         """dry-run のフレーム値が正しい（開始TC=01:00:00:00, offset=86400）"""
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            result = beat_marker_impl(
-                bpm=120, clip_index=1, note_value="1/4", dry_run=True
-            )
+            result = beat_marker_impl(bpm=120, clip_index=1, note_value="1/4", dry_run=True)
         # offset=86400, end_frame_abs=86400+240=86640
         # 12フレーム間隔: 86400, 86412, ..., 86640
         assert result["frames"][0] == 86400
@@ -184,18 +184,14 @@ class TestBeatMarkerImplExecute:
         assert result["note_value"] == "1/4"
         assert result["color"] == "Blue"
         assert len(result["frames"]) == 21
-        timeline = (
-            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
-        )
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
         assert timeline.AddMarker.call_count == 21
 
     def test_adds_markers_with_relative_frames(self, mock_resolve):
         """AddMarker は相対フレームで呼ばれる"""
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             beat_marker_impl(bpm=120, clip_index=1, note_value="1/4")
-        timeline = (
-            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
-        )
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
         first_call = timeline.AddMarker.call_args_list[0]
         assert first_call[0][0] == 0  # rel_frame
         assert first_call[0][1] == "Blue"
@@ -209,9 +205,7 @@ class TestBeatMarkerImplExecute:
                 bpm=120, clip_index=1, note_value="1/4", color="Red", name="Beat"
             )
         assert result["color"] == "Red"
-        timeline = (
-            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
-        )
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
         first_call = timeline.AddMarker.call_args_list[0]
         assert first_call[0][1] == "Red"
         assert first_call[0][2] == "Beat"
@@ -220,9 +214,7 @@ class TestBeatMarkerImplExecute:
         """カスタム duration が AddMarker に渡る"""
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             beat_marker_impl(bpm=120, clip_index=1, note_value="1/4", duration=5)
-        timeline = (
-            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
-        )
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
         first_call = timeline.AddMarker.call_args_list[0]
         assert first_call[0][4] == 5
 
@@ -230,9 +222,7 @@ class TestBeatMarkerImplExecute:
 class TestBeatMarkerPartialSuccess:
     def test_partial_success_reports_actual_count(self, mock_resolve):
         """一部フレームで AddMarker が失敗 → added_count は実際の成功数。"""
-        timeline = (
-            mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
-        )
+        timeline = mock_resolve.GetProjectManager().GetCurrentProject().GetCurrentTimeline()
         call_count = 0
 
         def add_marker_side_effect(rel_frame, color, name, note, duration):
@@ -253,27 +243,35 @@ class TestBeatMarkerPartialSuccess:
 class TestBeatMarkerImplValidation:
     def test_invalid_note_value_raises(self, mock_resolve):
         """不正な音価で ValidationError"""
-        with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            with pytest.raises(ValidationError, match="note_value"):
-                beat_marker_impl(bpm=120, clip_index=1, note_value="1/3")
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="note_value"),
+        ):
+            beat_marker_impl(bpm=120, clip_index=1, note_value="1/3")
 
     def test_bpm_too_low_raises(self, mock_resolve):
         """BPM が下限未満で ValidationError"""
-        with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            with pytest.raises(ValidationError, match="bpm"):
-                beat_marker_impl(bpm=10, clip_index=1)
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="bpm"),
+        ):
+            beat_marker_impl(bpm=10, clip_index=1)
 
     def test_bpm_too_high_raises(self, mock_resolve):
         """BPM が上限超で ValidationError"""
-        with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            with pytest.raises(ValidationError, match="bpm"):
-                beat_marker_impl(bpm=400, clip_index=1)
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="bpm"),
+        ):
+            beat_marker_impl(bpm=400, clip_index=1)
 
     def test_bpm_zero_raises(self, mock_resolve):
         """BPM 0 で ValidationError"""
-        with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            with pytest.raises(ValidationError, match="bpm"):
-                beat_marker_impl(bpm=0, clip_index=1)
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="bpm"),
+        ):
+            beat_marker_impl(bpm=0, clip_index=1)
 
     def test_bpm_boundary_low_valid(self, mock_resolve):
         """BPM 20.0（下限）は有効"""
@@ -295,9 +293,8 @@ class TestBeatMarkerImplValidation:
         project.GetCurrentTimeline.return_value = None
         pm.GetCurrentProject.return_value = project
         resolve.GetProjectManager.return_value = pm
-        with patch(RESOLVE_PATCH, return_value=resolve):
-            with pytest.raises(ProjectNotOpenError):
-                beat_marker_impl(bpm=120, clip_index=0)
+        with patch(RESOLVE_PATCH, return_value=resolve), pytest.raises(ProjectNotOpenError):
+            beat_marker_impl(bpm=120, clip_index=0)
 
     def test_no_project_raises(self):
         """プロジェクトなしで ProjectNotOpenError"""
@@ -305,24 +302,19 @@ class TestBeatMarkerImplValidation:
         pm = MagicMock()
         pm.GetCurrentProject.return_value = None
         resolve.GetProjectManager.return_value = pm
-        with patch(RESOLVE_PATCH, return_value=resolve):
-            with pytest.raises(ProjectNotOpenError):
-                beat_marker_impl(bpm=120, clip_index=0)
+        with patch(RESOLVE_PATCH, return_value=resolve), pytest.raises(ProjectNotOpenError):
+            beat_marker_impl(bpm=120, clip_index=0)
 
     def test_clip_index_out_of_range_raises(self, mock_resolve):
         """clip_index が範囲外で ValidationError"""
-        with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            with pytest.raises(ValidationError, match="clip_index"):
-                beat_marker_impl(bpm=120, clip_index=99)
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="clip_index"),
+        ):
+            beat_marker_impl(bpm=120, clip_index=99)
 
 
 # --- CLI Tests ---
-
-import json
-
-from click.testing import CliRunner
-
-from davinci_cli.cli import dr
 
 
 class TestBeatMarkerCLI:
@@ -378,7 +370,8 @@ class TestBeatMarkerCLI:
                     "marker",
                     "beats",
                     "--json",
-                    '{"bpm": 90, "clip_index": 1, "note_value": "1/2", "color": "Red", "name": "Beat"}',
+                    '{"bpm": 90, "clip_index": 1, "note_value": "1/2",'
+                    ' "color": "Red", "name": "Beat"}',
                     "--dry-run",
                 ],
             )
@@ -388,9 +381,6 @@ class TestBeatMarkerCLI:
 
 
 # --- MCP Tests ---
-
-
-from davinci_cli.schema_registry import SCHEMA_REGISTRY
 
 
 class TestBeatMarkerSchema:

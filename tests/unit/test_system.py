@@ -124,16 +124,20 @@ class TestKeyframeModeImpl:
     def test_keyframe_mode_set_failure_mentions_color_page(self, mock_resolve):
         mock_resolve.SetKeyframeMode.return_value = False
         mock_resolve.GetCurrentPage.return_value = "edit"
-        with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            with pytest.raises(ValidationError, match="Color page"):
-                keyframe_mode_set_impl(0)
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="Color page"),
+        ):
+            keyframe_mode_set_impl(0)
 
     def test_keyframe_mode_set_failure_includes_current_page(self, mock_resolve):
         mock_resolve.SetKeyframeMode.return_value = False
         mock_resolve.GetCurrentPage.return_value = "edit"
-        with patch(RESOLVE_PATCH, return_value=mock_resolve):
-            with pytest.raises(ValidationError, match="edit"):
-                keyframe_mode_set_impl(0)
+        with (
+            patch(RESOLVE_PATCH, return_value=mock_resolve),
+            pytest.raises(ValidationError, match="edit"),
+        ):
+            keyframe_mode_set_impl(0)
 
 
 class TestSystemCLI:

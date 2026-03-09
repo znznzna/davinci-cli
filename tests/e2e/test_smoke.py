@@ -93,9 +93,7 @@ class TestClipSmoke:
         assert result.exit_code == 0
 
     def test_property_set_dry_run(self, runner, mock_resolve):
-        result = runner.invoke(
-            dr, ["clip", "property", "set", "0", "Pan", "0.5", "--dry-run"]
-        )
+        result = runner.invoke(dr, ["clip", "property", "set", "0", "Pan", "0.5", "--dry-run"])
         assert result.exit_code == 0
 
 
@@ -103,9 +101,7 @@ class TestColorSmoke:
     def test_apply_lut_dry_run(self, runner, mock_resolve, tmp_path):
         lut_file = tmp_path / "test.cube"
         lut_file.touch()
-        result = runner.invoke(
-            dr, ["color", "apply-lut", "0", str(lut_file), "--dry-run"]
-        )
+        result = runner.invoke(dr, ["color", "apply-lut", "0", str(lut_file), "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -125,9 +121,7 @@ class TestMediaSmoke:
         assert result.exit_code == 0
 
     def test_folder_delete_dry_run(self, runner, mock_resolve):
-        result = runner.invoke(
-            dr, ["media", "folder", "delete", "OldFolder", "--dry-run"]
-        )
+        result = runner.invoke(dr, ["media", "folder", "delete", "OldFolder", "--dry-run"])
         assert result.exit_code == 0
 
 
@@ -137,9 +131,7 @@ class TestDeliverSmoke:
         assert result.exit_code == 0
 
     def test_list_jobs(self, runner, mock_resolve):
-        result = runner.invoke(
-            dr, ["deliver", "list-jobs", "--fields", "job_id,status"]
-        )
+        result = runner.invoke(dr, ["deliver", "list-jobs", "--fields", "job_id,status"])
         assert result.exit_code == 0
 
     def test_start_dry_run(self, runner, mock_resolve):

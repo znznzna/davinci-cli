@@ -35,9 +35,7 @@ class _JsonParamType(click.ParamType):
         try:
             parsed = json_module.loads(value)
             if not isinstance(parsed, dict):
-                self.fail(
-                    f"Expected JSON object, got {type(parsed).__name__}", param, ctx
-                )
+                self.fail(f"Expected JSON object, got {type(parsed).__name__}", param, ctx)
             return parsed
         except json_module.JSONDecodeError as e:
             self.fail(f"Invalid JSON: {e}", param, ctx)

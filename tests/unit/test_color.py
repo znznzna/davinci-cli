@@ -47,9 +47,7 @@ def mock_resolve():
     timeline.GetItemListInTrack.return_value = [clip]
     project.GetCurrentTimeline.return_value = timeline
     project.GetGallery.return_value = MagicMock(
-        GetCurrentStillAlbum=MagicMock(
-            return_value=MagicMock(GetStills=MagicMock(return_value=[]))
-        )
+        GetCurrentStillAlbum=MagicMock(return_value=MagicMock(GetStills=MagicMock(return_value=[])))
     )
     pm.GetCurrentProject.return_value = project
     resolve.GetProjectManager.return_value = pm
@@ -186,9 +184,7 @@ class TestColorVersionImpl:
         assert result == {"versionName": "V1", "versionType": 0}
 
     def test_version_add_dry_run(self):
-        result = color_version_add_impl(
-            clip_index=0, name="V2", version_type=0, dry_run=True
-        )
+        result = color_version_add_impl(clip_index=0, name="V2", version_type=0, dry_run=True)
         assert result == {
             "dry_run": True,
             "action": "version_add",
@@ -230,9 +226,7 @@ class TestColorVersionImpl:
 
 class TestColorVersionMutateImpl:
     def test_version_load_dry_run(self):
-        result = color_version_load_impl(
-            clip_index=0, name="V1", version_type=0, dry_run=True
-        )
+        result = color_version_load_impl(clip_index=0, name="V1", version_type=0, dry_run=True)
         assert result == {
             "dry_run": True,
             "action": "version_load",
@@ -272,9 +266,7 @@ class TestColorVersionMutateImpl:
             color_version_load_impl(clip_index=0, name="V1", version_type=0)
 
     def test_version_delete_dry_run(self):
-        result = color_version_delete_impl(
-            clip_index=0, name="V1", version_type=0, dry_run=True
-        )
+        result = color_version_delete_impl(clip_index=0, name="V1", version_type=0, dry_run=True)
         assert result == {
             "dry_run": True,
             "action": "version_delete",
@@ -357,9 +349,7 @@ class TestColorVersionMutateImpl:
             patch(RESOLVE_PATCH, return_value=mock_resolve),
             pytest.raises(ValidationError, match="Failed to rename version"),
         ):
-            color_version_rename_impl(
-                clip_index=0, old_name="V1", new_name="V2", version_type=0
-            )
+            color_version_rename_impl(clip_index=0, old_name="V1", new_name="V2", version_type=0)
 
 
 class TestGraphOperationsImpl:
@@ -380,9 +370,7 @@ class TestGraphOperationsImpl:
     def test_node_lut_set_dry_run(self, tmp_path):
         lut = tmp_path / "test.cube"
         lut.touch()
-        result = node_lut_set_impl(
-            clip_index=0, node_index=1, lut_path=str(lut), dry_run=True
-        )
+        result = node_lut_set_impl(clip_index=0, node_index=1, lut_path=str(lut), dry_run=True)
         assert result["dry_run"] is True
         assert result["action"] == "node_lut_set"
         assert result["clip_index"] == 0
@@ -408,9 +396,7 @@ class TestGraphOperationsImpl:
         assert result["node_index"] == 1
 
     def test_node_enable_dry_run(self):
-        result = node_enable_impl(
-            clip_index=0, node_index=1, enabled=True, dry_run=True
-        )
+        result = node_enable_impl(clip_index=0, node_index=1, enabled=True, dry_run=True)
         assert result["dry_run"] is True
         assert result["action"] == "node_enable"
         assert result["node_index"] == 1
@@ -523,17 +509,13 @@ class TestColorCLI:
     def test_apply_lut_dry_run(self, tmp_path):
         lut_file = tmp_path / "test.cube"
         lut_file.touch()
-        result = CliRunner().invoke(
-            dr, ["color", "apply-lut", "0", str(lut_file), "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["color", "apply-lut", "0", str(lut_file), "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
 
     def test_version_add_dry_run_cli(self):
-        result = CliRunner().invoke(
-            dr, ["color", "version", "add", "0", "V2", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["color", "version", "add", "0", "V2", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -545,18 +527,14 @@ class TestColorCLI:
         assert result.exit_code == 0
 
     def test_version_load_dry_run_cli(self):
-        result = CliRunner().invoke(
-            dr, ["color", "version", "load", "0", "V1", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["color", "version", "load", "0", "V1", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
         assert data["action"] == "version_load"
 
     def test_version_delete_dry_run_cli(self):
-        result = CliRunner().invoke(
-            dr, ["color", "version", "delete", "0", "V1", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["color", "version", "delete", "0", "V1", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True

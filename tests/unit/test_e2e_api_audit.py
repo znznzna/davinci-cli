@@ -195,9 +195,7 @@ class TestE2ESystemKeyframeMode:
         assert data["label"] == "color"
 
     def test_keyframe_mode_set_dry_run(self):
-        result = CliRunner().invoke(
-            dr, ["system", "keyframe-mode", "set", "2", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["system", "keyframe-mode", "set", "2", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -242,9 +240,7 @@ class TestE2ETimelineTimecode:
         assert data["timecode"] == "01:00:00:00"
 
     def test_timecode_set_dry_run(self):
-        result = CliRunner().invoke(
-            dr, ["timeline", "timecode", "set", "01:00:05:00", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["timeline", "timecode", "set", "01:00:05:00", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -612,9 +608,7 @@ class TestE2ENodeOps:
 
 class TestE2EDeliverExtended:
     def test_delete_job_dry_run(self):
-        result = CliRunner().invoke(
-            dr, ["deliver", "delete-job", "abc-123", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["deliver", "delete-job", "abc-123", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -703,9 +697,7 @@ class TestE2EGallery:
         assert data["name"] == "Album 1"
 
     def test_album_set_dry_run(self):
-        result = CliRunner().invoke(
-            dr, ["gallery", "album", "set", "Album 2", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["gallery", "album", "set", "Album 2", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -719,9 +711,7 @@ class TestE2EGallery:
         assert data["action"] == "album_create"
 
     def test_still_export_dry_run(self):
-        result = CliRunner().invoke(
-            dr, ["gallery", "still", "export", "/tmp/stills", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["gallery", "still", "export", "/tmp/stills", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True
@@ -742,9 +732,7 @@ class TestE2EGallery:
         assert data["action"] == "still_import"
 
     def test_still_delete_dry_run(self):
-        result = CliRunner().invoke(
-            dr, ["gallery", "still", "delete", "0", "1", "--dry-run"]
-        )
+        result = CliRunner().invoke(dr, ["gallery", "still", "delete", "0", "1", "--dry-run"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert data["dry_run"] is True

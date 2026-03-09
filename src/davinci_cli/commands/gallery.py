@@ -141,9 +141,7 @@ def gallery_album_set_impl(name: str, dry_run: bool = False) -> dict[str, Any]:
         if gallery.GetAlbumName(album) == name:
             result = gallery.SetCurrentStillAlbum(album)
             if result is False:
-                raise ValidationError(
-                    field="name", reason=f"Failed to set album: {name}"
-                )
+                raise ValidationError(field="name", reason=f"Failed to set album: {name}")
             return {"set": True, "name": name}
     raise ValidationError(field="name", reason=f"Album not found: {name}")
 
@@ -315,13 +313,9 @@ def still_import_cmd(ctx: click.Context, paths: tuple[str, ...], dry_run: bool) 
 @click.argument("still_indices", nargs=-1, required=True, type=int)
 @dry_run_option
 @click.pass_context
-def still_delete_cmd(
-    ctx: click.Context, still_indices: tuple[int, ...], dry_run: bool
-) -> None:
+def still_delete_cmd(ctx: click.Context, still_indices: tuple[int, ...], dry_run: bool) -> None:
     """スチルを削除する。"""
-    result = gallery_still_delete_impl(
-        still_indices=list(still_indices), dry_run=dry_run
-    )
+    result = gallery_still_delete_impl(still_indices=list(still_indices), dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
 
 

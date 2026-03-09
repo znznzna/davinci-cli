@@ -358,9 +358,7 @@ def still_grab_impl(clip_index: int, dry_run: bool = False) -> dict[str, Any]:
     return {"grabbed": True, "clip_index": clip_index}
 
 
-def color_version_list_impl(
-    clip_index: int, version_type: int = 0
-) -> list[dict[str, Any]]:
+def color_version_list_impl(clip_index: int, version_type: int = 0) -> list[dict[str, Any]]:
     tl = _get_current_timeline()
     clip_item = _get_clip_item_by_index(tl, clip_index)
     names = clip_item.GetVersionNameList(version_type) or []
@@ -672,13 +670,9 @@ def color() -> None:
 @click.argument("lut_path")
 @dry_run_option
 @click.pass_context
-def apply_lut(
-    ctx: click.Context, clip_index: int, lut_path: str, dry_run: bool
-) -> None:
+def apply_lut(ctx: click.Context, clip_index: int, lut_path: str, dry_run: bool) -> None:
     """LUT をクリップに適用する。"""
-    result = color_apply_lut_impl(
-        clip_index=clip_index, lut_path=lut_path, dry_run=dry_run
-    )
+    result = color_apply_lut_impl(clip_index=clip_index, lut_path=lut_path, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
 
 
@@ -697,13 +691,9 @@ def color_reset(ctx: click.Context, clip_index: int, dry_run: bool) -> None:
 @click.option("--to", "to_index", type=int, required=True)
 @dry_run_option
 @click.pass_context
-def copy_grade(
-    ctx: click.Context, from_index: int, to_index: int, dry_run: bool
-) -> None:
+def copy_grade(ctx: click.Context, from_index: int, to_index: int, dry_run: bool) -> None:
     """グレードをコピーする。"""
-    result = color_copy_grade_impl(
-        from_index=from_index, to_index=to_index, dry_run=dry_run
-    )
+    result = color_copy_grade_impl(from_index=from_index, to_index=to_index, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
 
 

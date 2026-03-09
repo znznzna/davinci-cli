@@ -69,9 +69,7 @@ class TestDeliverPresetImpl:
         project.GetRenderPresetList.assert_called_once()
 
     def test_load_not_found(self, mock_resolve):
-        mock_resolve.GetProjectManager().GetCurrentProject().LoadRenderPreset.return_value = (
-            False
-        )
+        mock_resolve.GetProjectManager().GetCurrentProject().LoadRenderPreset.return_value = False
         with (
             patch(RESOLVE_PATCH, return_value=mock_resolve),
             pytest.raises(ValidationError, match="not found"),
@@ -172,9 +170,7 @@ class TestDeliverExtendedImpl:
         assert result["job_id"] == "job-001"
 
     def test_delete_job(self, mock_resolve):
-        mock_resolve.GetProjectManager().GetCurrentProject().DeleteRenderJob.return_value = (
-            True
-        )
+        mock_resolve.GetProjectManager().GetCurrentProject().DeleteRenderJob.return_value = True
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = deliver_delete_job_impl(job_id="job-001")
         assert result["deleted"] is True
@@ -186,9 +182,7 @@ class TestDeliverExtendedImpl:
         assert result["action"] == "delete_all_jobs"
 
     def test_delete_all_jobs(self, mock_resolve):
-        mock_resolve.GetProjectManager().GetCurrentProject().DeleteAllRenderJobs.return_value = (
-            True
-        )
+        mock_resolve.GetProjectManager().GetCurrentProject().DeleteAllRenderJobs.return_value = True
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = deliver_delete_all_jobs_impl()
         assert result["deleted_all"] is True
@@ -391,9 +385,7 @@ class TestDeliverFormatsImpl:
         with patch(RESOLVE_PATCH, return_value=mock_resolve):
             result = deliver_preset_import_impl(path=str(preset_file))
         assert result["imported"] is True
-        mock_resolve.ImportRenderPreset.assert_called_once_with(
-            str(preset_file.resolve())
-        )
+        mock_resolve.ImportRenderPreset.assert_called_once_with(str(preset_file.resolve()))
 
     def test_preset_import_file_not_found(self):
         with pytest.raises(ValidationError, match="not found"):
@@ -401,9 +393,7 @@ class TestDeliverFormatsImpl:
 
     def test_preset_export_dry_run(self, tmp_path):
         export_path = str(tmp_path / "exported.xml")
-        result = deliver_preset_export_impl(
-            name="MyPreset", path=export_path, dry_run=True
-        )
+        result = deliver_preset_export_impl(name="MyPreset", path=export_path, dry_run=True)
         assert result["dry_run"] is True
         assert result["action"] == "preset_export"
         assert result["name"] == "MyPreset"

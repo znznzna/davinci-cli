@@ -467,9 +467,7 @@ def media() -> None:
 @click.option("--folder", default=None, help="Folder name")
 @fields_option
 @click.pass_context
-def media_list(
-    ctx: click.Context, folder: str | None, fields: list[str] | None
-) -> None:
+def media_list(ctx: click.Context, folder: str | None, fields: list[str] | None) -> None:
     """メディア一覧。"""
     result = media_list_impl(folder_name=folder, fields=fields)
     output(result, pretty=ctx.obj.get("pretty"))
@@ -525,9 +523,7 @@ def media_move_cmd(
     ctx: click.Context, clip_names: tuple[str, ...], target: str, dry_run: bool
 ) -> None:
     """クリップを別フォルダに移動。"""
-    result = media_move_impl(
-        clip_names=list(clip_names), target_folder=target, dry_run=dry_run
-    )
+    result = media_move_impl(clip_names=list(clip_names), target_folder=target, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
 
 
@@ -535,9 +531,7 @@ def media_move_cmd(
 @click.argument("clip_names", nargs=-1, required=True)
 @dry_run_option
 @click.pass_context
-def media_delete_cmd(
-    ctx: click.Context, clip_names: tuple[str, ...], dry_run: bool
-) -> None:
+def media_delete_cmd(ctx: click.Context, clip_names: tuple[str, ...], dry_run: bool) -> None:
     """クリップを削除。"""
     result = media_delete_impl(clip_names=list(clip_names), dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
@@ -595,9 +589,7 @@ def media_metadata_set_cmd(
     ctx: click.Context, clip_name: str, key: str, value: str, dry_run: bool
 ) -> None:
     """クリップのメタデータを設定。"""
-    result = media_metadata_set_impl(
-        clip_name=clip_name, key=key, value=value, dry_run=dry_run
-    )
+    result = media_metadata_set_impl(clip_name=clip_name, key=key, value=value, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))
 
 
@@ -605,9 +597,7 @@ def media_metadata_set_cmd(
 @click.argument("file_name")
 @dry_run_option
 @click.pass_context
-def media_export_metadata_cmd(
-    ctx: click.Context, file_name: str, dry_run: bool
-) -> None:
+def media_export_metadata_cmd(ctx: click.Context, file_name: str, dry_run: bool) -> None:
     """メディアプールのメタデータをエクスポート。"""
     result = media_export_metadata_impl(file_name=file_name, dry_run=dry_run)
     output(result, pretty=ctx.obj.get("pretty"))

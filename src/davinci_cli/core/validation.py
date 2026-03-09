@@ -88,9 +88,7 @@ def validate_resource_id(resource_id: str | None) -> str:
     if resource_id is None or not isinstance(resource_id, str):
         raise ValidationError(field="resource_id", reason="must be a non-null string")
     if not resource_id.strip():
-        raise ValidationError(
-            field="resource_id", reason="empty resource ID is not allowed"
-        )
+        raise ValidationError(field="resource_id", reason="empty resource ID is not allowed")
     if _RESOURCE_ID_INVALID_CHARS_RE.search(resource_id):
         raise ValidationError(
             field="resource_id",
