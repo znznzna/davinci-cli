@@ -1,6 +1,9 @@
 from pathlib import Path
 
+from davinci_cli import __version__
+
 SKILL_MD = Path("plugin/skills/davinci-cli/SKILL.md")
+WORKFLOWS_MD = Path("plugin/skills/davinci-cli/references/workflows.md")
 
 
 def test_skill_md_exists():
@@ -11,7 +14,7 @@ def test_skill_md_has_frontmatter():
     content = SKILL_MD.read_text(encoding="utf-8")
     assert content.startswith("---"), "Must have YAML frontmatter"
     assert "name: davinci-cli" in content
-    assert "version: 1.0.0" in content
+    assert f"version: {__version__}" in content
 
 
 def test_skill_md_has_agent_rules():
@@ -21,7 +24,10 @@ def test_skill_md_has_agent_rules():
 
 
 def test_skill_md_has_all_command_groups():
+    """SKILL.md本文 or references/workflows.md にコマンドグループが存在すること。"""
     content = SKILL_MD.read_text(encoding="utf-8")
+    workflows = WORKFLOWS_MD.read_text(encoding="utf-8") if WORKFLOWS_MD.exists() else ""
+    combined = content + workflows
     for group in [
         "dr system",
         "dr schema",
@@ -32,7 +38,7 @@ def test_skill_md_has_all_command_groups():
         "dr media",
         "dr deliver",
     ]:
-        assert group in content, f"Missing command group: {group}"
+        assert group in combined, f"Missing command group: {group}"
 
 
 def test_skill_md_has_usage_patterns():

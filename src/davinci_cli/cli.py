@@ -18,6 +18,7 @@ import json
 
 import click
 
+from davinci_cli import __version__
 from davinci_cli.core.exceptions import DavinciCLIError
 from davinci_cli.core.logging import setup_logging
 
@@ -49,7 +50,7 @@ class DavinciCLIGroup(click.Group):
 
 
 @click.group(cls=DavinciCLIGroup)
-@click.version_option()
+@click.version_option(version=__version__)
 @click.option(
     "--pretty",
     is_flag=True,

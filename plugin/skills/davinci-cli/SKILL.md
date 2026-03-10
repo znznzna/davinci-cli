@@ -1,6 +1,6 @@
 ---
 name: davinci-cli
-version: 1.0.1
+version: 1.0.2
 description: "DaVinci Resolve CLI / MCP \u2014 agent-first interface for controlling DaVinci Resolve. Use when user asks to edit video, color grade, manage timelines, render/deliver, manage media pool, or interact with DaVinci Resolve in any way. Triggers: DaVinci, Resolve, timeline, color grading, rendering, LUT, media pool, dr command. Do NOT use for other video editors like Premiere Pro, Final Cut Pro, or CapCut."
 ---
 
