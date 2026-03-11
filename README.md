@@ -61,6 +61,14 @@ For **Claude Code** users — install the Claude Code Plugin so the agent can di
 /plugin install davinci-cli@davinci-cli
 ```
 
+To update the plugin to the latest version:
+
+```bash
+/plugin uninstall davinci-cli@davinci-cli
+/plugin marketplace update
+/plugin install davinci-cli@davinci-cli
+```
+
 The agent reads `SKILL.md` to understand available commands, parameters, and workflows. No manual command typing needed.
 
 #### Option B: Claude Desktop / Cowork (MCP Server)

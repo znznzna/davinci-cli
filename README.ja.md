@@ -61,6 +61,14 @@ pip install --upgrade davinci-cli
 /plugin install davinci-cli@davinci-cli
 ```
 
+プラグインを最新版に更新するには：
+
+```bash
+/plugin uninstall davinci-cli@davinci-cli
+/plugin marketplace update
+/plugin install davinci-cli@davinci-cli
+```
+
 エージェントは `SKILL.md` を読んで利用可能なコマンド、パラメータ、ワークフローを把握します。手動でコマンドを打つ必要はありません。
 
 #### Option B: Claude Desktop / Cowork（MCP Server）
